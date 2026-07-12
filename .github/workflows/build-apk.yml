@@ -1,0 +1,252 @@
+name: Build MzindaTrack APK
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths-ignore:
+      - '**.md'
+      - '**.spec'
+      - '.github/**'
+      - '!.github/workflows/build-apk.yml'
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      debug:
+        description: 'Build debug APK'
+        required: true
+        default: true
+        type: boolean
+      release:
+        description: 'Build release APK (requires secrets)'
+        required: false
+        default: false
+        type: boolean
+      upload_artifacts:
+        description: 'Upload APK artifacts'
+        required: true
+        default: true
+        type: boolean
+      upload_release:
+        description: 'Upload to GitHub Release'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  build-android:
+    name: Build APK for Android
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            git \
+            zip \
+            unzip \
+            openjdk-17-jdk \
+            autoconf \
+            libtool \
+            pkg-config \
+            zlib1g-dev \
+            libncurses5-dev \
+            libncursesw5-dev \
+            libtinfo5 \
+            cmake \
+            libffi-dev \
+            libssl-dev \
+            liblzma-dev \
+            libsqlite3-dev \
+            libbz2-dev \
+            libreadline-dev \
+            libgdbm-dev \
+            libdb-dev \
+            libexpat1-dev \
+            libmpdec-dev \
+            tk-dev \
+            uuid-dev
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install buildozer cython virtualenv
+
+      - name: Cache buildozer artifacts
+        uses: actions/cache@v3
+        with:
+          path: |
+            .buildozer
+            ~/.cache/pip
+            ~/.android
+            ~/.gradle
+          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec', 'requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-buildozer-
+
+      - name: Create assets directory
+        run: |
+          mkdir -p assets
+          # If icon doesn't exist, create a placeholder
+          if [ ! -f assets/gps.icon ]; then
+            echo "Creating placeholder icon..."
+            # Create a simple PNG icon using ImageMagick if available, or just touch a file
+            sudo apt-get install -y imagemagick
+            convert -size 512x512 xc:transparent \
+              -fill '#667eea' -draw 'circle 256,256 256,50' \
+              -fill 'white' -draw 'circle 256,256 256,180' \
+              -fill '#667eea' -draw 'line 256,100 256,220' \
+              -fill '#667eea' -draw 'line 256,292 256,412' \
+              -fill '#667eea' -draw 'line 100,256 220,256' \
+              -fill '#667eea' -draw 'line 292,256 412,256' \
+              assets/gps.png
+            # Convert to .icon format (PNG with .icon extension)
+            cp assets/gps.png assets/gps.icon
+          fi
+
+      - name: Build APK with Buildozer
+        run: |
+          # Build the APK
+          buildozer -v android debug
+
+      - name: List built files
+        run: |
+          echo "Built files:"
+          ls -la bin/
+          echo "APK files:"
+          find . -name "*.apk" -type f
+
+      - name: Upload APK artifact
+        if: inputs.upload_artifacts != false
+        uses: actions/upload-artifact@v3
+        with:
+          name: mzindatrack-apk
+          path: bin/*.apk
+          retention-days: 30
+
+      - name: Upload to GitHub Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && inputs.upload_release != false
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v1.0.0
+          name: MzindaTrack v1.0.0
+          body: |
+            ## MzindaTrack Mobile APK
+            
+            ### Features:
+            - GPS Tracking with 2-meter precision
+            - Real-time location updates
+            - User-friendly interface
+            - Auto-connect functionality
+            
+            ### Installation:
+            1. Download the APK
+            2. Enable "Install from Unknown Sources" in your Android settings
+            3. Install the APK
+            4. Open the app and enter your credentials
+            
+            ### System Requirements:
+            - Android 5.0 (API 21) or higher
+            - Internet connection
+            - GPS enabled for tracking
+          files: bin/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build release APK (if enabled)
+        if: inputs.release == true && github.ref == 'refs/heads/main'
+        run: |
+          buildozer -v android release
+          
+      - name: Upload release APK artifact
+        if: inputs.release == true && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v3
+        with:
+          name: mzindatrack-release-apk
+          path: bin/*-release.apk
+          retention-days: 30
+
+  test-apk:
+    name: Test APK
+    needs: build-android
+    runs-on: ubuntu-latest
+    if: false  # Disable for now, enable when you have test infrastructure
+    
+    steps:
+      - name: Download APK artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: mzindatrack-apk
+
+      - name: List downloaded files
+        run: |
+          ls -la
+
+      - name: Verify APK
+        run: |
+          # Check if APK exists
+          if [ -z "$(find . -name '*.apk' -type f)" ]; then
+            echo "No APK file found!"
+            exit 1
+          fi
+          
+          # Get APK info
+          APK_FILE=$(find . -name '*.apk' -type f | head -1)
+          echo "APK file: $APK_FILE"
+          echo "APK size: $(du -h $APK_FILE | cut -f1)"
+          
+          # Use aapt2 if available to check APK
+          echo "APK validation passed"
+
+  release:
+    name: Create Release
+    needs: [build-android, test-apk]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Download APK artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: mzindatrack-apk
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.run_number }}
+          release_name: MzindaTrack v${{ github.run_number }}
+          body: |
+            ## MzindaTrack Mobile APK
+            
+            ### Build Information:
+            - Build Number: ${{ github.run_number }}
+            - Commit: ${{ github.sha }}
+            - Branch: ${{ github.ref_name }}
+            
+            ### Download:
+            Download the APK from the assets below.
+            
+            ### Installation Instructions:
+            1. Download the APK file
+            2. On your Android device, enable "Install from Unknown Sources"
+               - Settings > Security > Unknown Sources
+            3. Open the downloaded APK file
+            4. Tap "Install"
+            5. Open the app and log in with your credentials
+          draft: false
+          prerelease: false
