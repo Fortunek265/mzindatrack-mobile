@@ -1,12 +1,13 @@
 """
 MzindaTrack Mobile - GPS Tracking Application
-Main entry point for Android and desktop
+Mobile version with Kivy UI
 """
 
 import os
 import sys
 import json
 import requests
+import threading
 from datetime import datetime
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
@@ -17,17 +18,20 @@ from kivy.uix.progressbar import ProgressBar
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.popup import Popup
+from kivy.uix.image import Image
 from kivy.core.window import Window
 from kivy.clock import Clock
 from kivy.utils import platform
 from kivy.metrics import dp
+from kivy.graphics import Color, Rectangle, RoundedRectangle
+from kivy.uix.widget import Widget
 
 # Android-specific imports
 if platform == 'android':
     from android.permissions import request_permissions, Permission
     from android import mActivity
-    from jnius import autoclass
     from plyer import gps
+    from jnius import autoclass
     
     # Request permissions on Android
     request_permissions([
@@ -67,7 +71,7 @@ class MzindaTrackAPI:
         try:
             response = self.session.get(
                 f"{self.base_url}/api/user_info/{token}",
-                timeout=10
+                timeout=15
             )
             
             if response.status_code == 200:
@@ -106,7 +110,7 @@ class MzindaTrackAPI:
                     'email': email,
                     'organisation': organisation
                 },
-                timeout=15
+                timeout=20
             )
             
             if response.status_code == 200:
@@ -144,6 +148,22 @@ class MzindaTrackAPI:
         except:
             return {'status': 'unreachable'}
 
+class GradientButton(Button):
+    """Custom button with gradient background"""
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.background_color = (0, 0, 0, 0)
+        self.background_normal = ''
+        self.color = (1, 1, 1, 1)
+        self.bind(size=self.update_canvas)
+        self.bind(pos=self.update_canvas)
+    
+    def update_canvas(self, *args):
+        self.canvas.before.clear()
+        with self.canvas.before:
+            Color(0.4, 0.49, 0.92, 1)
+            RoundedRectangle(pos=self.pos, size=self.size, radius=[10])
+
 class ConnectScreen(Screen):
     """Connection screen for MzindaTrack"""
     
@@ -154,70 +174,93 @@ class ConnectScreen(Screen):
         self.current_token = None
         self.user_info = None
         
-        layout = BoxLayout(orientation='vertical', padding=dp(16), spacing=dp(12))
+        # Main layout
+        layout = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(15))
         
-        # Title
+        # Header with icon and title
+        header = BoxLayout(orientation='vertical', size_hint_y=None, height=dp(120))
+        
+        # App icon
+        icon = Image(
+            source='assets/gps.png' if os.path.exists('assets/gps.png') else '',
+            size_hint=(None, None),
+            size=(dp(64), dp(64)),
+            pos_hint={'center_x': 0.5}
+        )
+        header.add_widget(icon)
+        
         title = Label(
-            text='🎯 MzindaTrack',
-            font_size='24sp',
+            text='MzindaTrack',
+            font_size='28sp',
+            bold=True,
             color=(0.39, 1.0, 0.85, 1.0),
             size_hint_y=None,
-            height=dp(50)
+            height=dp(40)
         )
-        layout.add_widget(title)
+        header.add_widget(title)
         
         subtitle = Label(
             text='GPS yathu, Chitetezo chathu',
             font_size='14sp',
             color=(0.53, 0.57, 0.69, 1.0),
             size_hint_y=None,
-            height=dp(30)
+            height=dp(25)
         )
-        layout.add_widget(subtitle)
+        header.add_widget(subtitle)
+        
+        layout.add_widget(header)
+        
+        # Scrollable content
+        scroll = ScrollView()
+        content = BoxLayout(orientation='vertical', spacing=dp(15), size_hint_y=None)
+        content.bind(minimum_height=content.setter('height'))
         
         # Server URL
-        server_layout = BoxLayout(orientation='vertical', spacing=dp(8))
         server_label = Label(
             text='Server URL',
             size_hint_y=None,
             height=dp(25),
             halign='left',
-            text_size=(Window.width - dp(32), None)
+            text_size=(Window.width - dp(40), None),
+            color=(0.88, 0.9, 0.93, 1.0)
         )
-        server_layout.add_widget(server_label)
+        content.add_widget(server_label)
         
         self.server_input = TextInput(
             text=DEFAULT_SERVER_URLS[0],
             multiline=False,
             size_hint_y=None,
-            height=dp(40),
-            background_color=(0.1, 0.12, 0.15, 1.0),
-            foreground_color=(0.88, 0.9, 0.93, 1.0)
+            height=dp(45),
+            background_color=(0.1, 0.12, 0.18, 1.0),
+            foreground_color=(0.88, 0.9, 0.93, 1.0),
+            cursor_color=(0.4, 0.49, 0.92, 1.0),
+            padding=(dp(10), dp(10))
         )
-        server_layout.add_widget(self.server_input)
-        layout.add_widget(server_layout)
+        content.add_widget(self.server_input)
         
         # Token
-        token_layout = BoxLayout(orientation='vertical', spacing=dp(8))
         token_label = Label(
-            text='Token or Access URL',
+            text='Access Token',
             size_hint_y=None,
             height=dp(25),
             halign='left',
-            text_size=(Window.width - dp(32), None)
+            text_size=(Window.width - dp(40), None),
+            color=(0.88, 0.9, 0.93, 1.0)
         )
-        token_layout.add_widget(token_label)
+        content.add_widget(token_label)
         
         self.token_input = TextInput(
             multiline=False,
             size_hint_y=None,
-            height=dp(40),
-            background_color=(0.1, 0.12, 0.15, 1.0),
+            height=dp(45),
+            background_color=(0.1, 0.12, 0.18, 1.0),
             foreground_color=(0.88, 0.9, 0.93, 1.0),
-            hint_text='Paste your token here'
+            cursor_color=(0.4, 0.49, 0.92, 1.0),
+            padding=(dp(10), dp(10)),
+            hint_text='Paste your token here',
+            hint_text_color=(0.42, 0.48, 0.56, 1.0)
         )
-        token_layout.add_widget(self.token_input)
-        layout.add_widget(token_layout)
+        content.add_widget(self.token_input)
         
         # Status
         self.status_label = Label(
@@ -226,7 +269,7 @@ class ConnectScreen(Screen):
             height=dp(30),
             color=(0.88, 0.9, 0.93, 1.0)
         )
-        layout.add_widget(self.status_label)
+        content.add_widget(self.status_label)
         
         # Progress
         self.progress = ProgressBar(
@@ -236,28 +279,33 @@ class ConnectScreen(Screen):
             height=dp(6)
         )
         self.progress.opacity = 0
-        layout.add_widget(self.progress)
+        content.add_widget(self.progress)
         
         # Buttons
-        btn_layout = BoxLayout(orientation='horizontal', spacing=dp(8), size_hint_y=None, height=dp(48))
+        btn_layout = BoxLayout(orientation='vertical', spacing=dp(10), size_hint_y=None, height=dp(120))
         
         self.verify_btn = Button(
             text='🔐 Verify Token',
             background_color=(0.4, 0.49, 0.92, 1.0),
-            color=(1, 1, 1, 1)
+            color=(1, 1, 1, 1),
+            size_hint_y=None,
+            height=dp(48),
+            bold=True
         )
         self.verify_btn.bind(on_press=self.verify_token)
         btn_layout.add_widget(self.verify_btn)
         
         register_btn = Button(
-            text='📝 Register',
-            background_color=(0.2, 0.22, 0.28, 1.0),
-            color=(1, 1, 1, 1)
+            text='📝 Register New Account',
+            background_color=(0.2, 0.22, 0.32, 1.0),
+            color=(0.88, 0.9, 0.93, 1.0),
+            size_hint_y=None,
+            height=dp(48)
         )
         register_btn.bind(on_press=self.open_registration)
         btn_layout.add_widget(register_btn)
         
-        layout.add_widget(btn_layout)
+        content.add_widget(btn_layout)
         
         # Info
         info = Label(
@@ -265,9 +313,12 @@ class ConnectScreen(Screen):
             font_size='12sp',
             color=(0.42, 0.48, 0.56, 1.0),
             size_hint_y=None,
-            height=dp(40)
+            height=dp(30)
         )
-        layout.add_widget(info)
+        content.add_widget(info)
+        
+        scroll.add_widget(content)
+        layout.add_widget(scroll)
         
         self.add_widget(layout)
     
@@ -286,6 +337,11 @@ class ConnectScreen(Screen):
             self.status_label.color = (1, 0.27, 0.21, 1.0)
             return
         
+        # Add http:// if missing
+        if not server_url.startswith('http://') and not server_url.startswith('https://'):
+            server_url = 'http://' + server_url
+            self.server_input.text = server_url
+        
         self.api.set_base_url(server_url)
         self.verify_btn.disabled = True
         self.status_label.text = '⏳ Verifying token...'
@@ -294,17 +350,16 @@ class ConnectScreen(Screen):
         self.progress.value = 20
         
         # Perform verification in background thread
-        Clock.schedule_once(lambda dt: self.do_verify(token), 0.1)
-    
-    def do_verify(self, token):
-        """Perform verification in background"""
-        result = self.api.verify_token(token)
-        Clock.schedule_once(lambda dt: self.verification_complete(result), 0.1)
+        def do_verify():
+            result = self.api.verify_token(token)
+            Clock.schedule_once(lambda dt: self.verification_complete(result), 0.1)
+        
+        threading.Thread(target=do_verify, daemon=True).start()
     
     def verification_complete(self, result):
         """Handle verification completion"""
         self.progress.value = 100
-        self.progress.opacity = 0
+        Clock.schedule_once(lambda dt: setattr(self.progress, 'opacity', 0), 0.5)
         self.verify_btn.disabled = False
         
         if result.get('valid'):
@@ -315,10 +370,41 @@ class ConnectScreen(Screen):
             self.status_label.text = '✅ Token verified successfully!'
             self.status_label.color = (0.3, 0.78, 0.31, 1.0)
             
-            # Save token
+            # Show success popup
             user_info = self.user_info
-            self.parent.show_account_screen(user_info)
-            self.parent.open_map(self.current_token, self.api.base_url)
+            popup_content = BoxLayout(orientation='vertical', spacing=dp(10), padding=dp(10))
+            popup_content.add_widget(Label(
+                text=f"Welcome {user_info.get('full_name', 'User')}!",
+                font_size='18sp'
+            ))
+            popup_content.add_widget(Label(
+                text=f"Email: {user_info.get('email', '')}",
+                font_size='14sp'
+            ))
+            
+            btn = Button(
+                text='Continue to Map',
+                size_hint_y=None,
+                height=dp(48),
+                background_color=(0.4, 0.49, 0.92, 1.0)
+            )
+            popup_content.add_widget(btn)
+            
+            popup = Popup(
+                title='Access Granted',
+                content=popup_content,
+                size_hint=(0.8, 0.5)
+            )
+            
+            def continue_to_map(instance):
+                popup.dismiss()
+                # Navigate to map
+                self.parent.show_account_screen(user_info)
+                self.parent.open_map(self.current_token, self.api.base_url)
+            
+            btn.bind(on_press=continue_to_map)
+            popup.open()
+            
         else:
             self.verified = False
             self.status_label.text = f'❌ {result.get("error", "Invalid token")}'
@@ -327,49 +413,68 @@ class ConnectScreen(Screen):
             # Show error popup
             popup = Popup(
                 title='Verification Failed',
-                content=Label(text=result.get('error', 'Invalid token')),
-                size_hint=(0.8, 0.4)
+                content=Label(
+                    text=result.get('error', 'Invalid token'),
+                    text_size=(Window.width - dp(40), None),
+                    halign='center'
+                ),
+                size_hint=(0.8, 0.3)
             )
             popup.open()
     
     def open_registration(self, instance):
         """Open registration dialog"""
-        popup_layout = BoxLayout(orientation='vertical', spacing=dp(10), padding=dp(10))
+        popup_layout = BoxLayout(orientation='vertical', spacing=dp(10), padding=dp(15))
         
+        # Name input
         name_input = TextInput(
             multiline=False,
             size_hint_y=None,
-            height=dp(40),
-            hint_text='Full Name'
+            height=dp(45),
+            hint_text='Full Name',
+            background_color=(0.1, 0.12, 0.18, 1.0),
+            foreground_color=(0.88, 0.9, 0.93, 1.0),
+            padding=(dp(10), dp(10))
         )
         popup_layout.add_widget(name_input)
         
+        # Email input
         email_input = TextInput(
             multiline=False,
             size_hint_y=None,
-            height=dp(40),
-            hint_text='Email'
+            height=dp(45),
+            hint_text='Email Address',
+            background_color=(0.1, 0.12, 0.18, 1.0),
+            foreground_color=(0.88, 0.9, 0.93, 1.0),
+            padding=(dp(10), dp(10))
         )
         popup_layout.add_widget(email_input)
         
+        # Organisation input
         org_input = TextInput(
             multiline=False,
             size_hint_y=None,
-            height=dp(40),
-            hint_text='Organisation (optional)'
+            height=dp(45),
+            hint_text='Organisation (optional)',
+            background_color=(0.1, 0.12, 0.18, 1.0),
+            foreground_color=(0.88, 0.9, 0.93, 1.0),
+            padding=(dp(10), dp(10))
         )
         popup_layout.add_widget(org_input)
         
+        # Status label
         status_label = Label(
             text='',
             size_hint_y=None,
-            height=dp(30)
+            height=dp(30),
+            color=(0.88, 0.9, 0.93, 1.0)
         )
         popup_layout.add_widget(status_label)
         
-        btn_layout = BoxLayout(orientation='horizontal', spacing=dp(8), size_hint_y=None, height=dp(40))
-        register_btn = Button(text='Register', background_color=(0.3, 0.78, 0.31, 1.0))
-        cancel_btn = Button(text='Cancel', background_color=(0.2, 0.22, 0.28, 1.0))
+        # Buttons
+        btn_layout = BoxLayout(orientation='horizontal', spacing=dp(8), size_hint_y=None, height=dp(48))
+        register_btn = Button(text='Register', background_color=(0.3, 0.78, 0.31, 1.0), color=(1,1,1,1))
+        cancel_btn = Button(text='Cancel', background_color=(0.2, 0.22, 0.32, 1.0), color=(0.88,0.9,0.93,1))
         btn_layout.add_widget(register_btn)
         btn_layout.add_widget(cancel_btn)
         popup_layout.add_widget(btn_layout)
@@ -377,7 +482,7 @@ class ConnectScreen(Screen):
         popup = Popup(
             title='Register for MzindaTrack',
             content=popup_layout,
-            size_hint=(0.9, 0.8)
+            size_hint=(0.9, 0.7)
         )
         
         def register(instance):
@@ -396,24 +501,39 @@ class ConnectScreen(Screen):
             
             server_url = self.server_input.text.strip()
             self.api.set_base_url(server_url)
-            result = self.api.register_user(name, email, org)
             
-            if result.get('success'):
-                status_label.text = f'✅ {result["message"]}'
-                status_label.color = (0.3, 0.78, 0.31, 1.0)
+            def do_register():
+                result = self.api.register_user(name, email, org)
+                Clock.schedule_once(lambda dt: register_complete(result), 0.1)
+            
+            def register_complete(result):
+                if result.get('success'):
+                    status_label.text = f'✅ {result["message"]}'
+                    status_label.color = (0.3, 0.78, 0.31, 1.0)
+                    
+                    if result.get('payment_url'):
+                        payment_msg = BoxLayout(orientation='vertical', spacing=dp(10), padding=dp(10))
+                        payment_msg.add_widget(Label(text=f'Payment link sent to {email}'))
+                        payment_msg.add_widget(Label(text='Check your email for payment instructions', font_size='12sp'))
+                        
+                        btn = Button(text='OK', size_hint_y=None, height=dp(48))
+                        payment_popup = Popup(
+                            title='Registration Successful',
+                            content=payment_msg,
+                            size_hint=(0.8, 0.4)
+                        )
+                        btn.bind(on_press=payment_popup.dismiss)
+                        payment_msg.add_widget(btn)
+                        payment_popup.open()
+                    
+                    Clock.schedule_once(lambda dt: popup.dismiss(), 2)
+                else:
+                    status_label.text = f'❌ {result.get("error", "Registration failed")}'
+                    status_label.color = (1, 0.27, 0.21, 1.0)
                 
-                if result.get('payment_url'):
-                    payment_popup = Popup(
-                        title='Registration Successful',
-                        content=Label(text=f'Payment link sent to {email}\nClick OK to open payment page'),
-                        size_hint=(0.8, 0.4)
-                    )
-                    payment_popup.open()
-            else:
-                status_label.text = f'❌ {result.get("error", "Registration failed")}'
-                status_label.color = (1, 0.27, 0.21, 1.0)
+                register_btn.disabled = False
             
-            register_btn.disabled = False
+            threading.Thread(target=do_register, daemon=True).start()
         
         register_btn.bind(on_press=register)
         cancel_btn.bind(on_press=popup.dismiss)
@@ -427,46 +547,127 @@ class MapScreen(Screen):
         layout = BoxLayout(orientation='vertical')
         
         # Top bar
-        top_bar = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(50), padding=dp(10))
+        top_bar = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(55), padding=dp(10))
+        top_bar.canvas.before.clear()
+        with top_bar.canvas.before:
+            Color(0.06, 0.08, 0.15, 1)
+            Rectangle(pos=top_bar.pos, size=top_bar.size)
         
         back_btn = Button(
             text='← Back',
             size_hint_x=None,
-            width=dp(80),
-            background_color=(0.2, 0.22, 0.28, 1.0)
+            width=dp(70),
+            background_color=(0.2, 0.22, 0.32, 1.0),
+            color=(0.88, 0.9, 0.93, 1.0)
         )
         back_btn.bind(on_press=self.go_back)
         top_bar.add_widget(back_btn)
         
         title = Label(
-            text='🗺️ MzindaTrack Map',
+            text='🗺️ Map View',
             color=(0.39, 1.0, 0.85, 1.0),
+            font_size='18sp',
+            bold=True,
             size_hint_x=1
         )
         top_bar.add_widget(title)
         
         layout.add_widget(top_bar)
         
-        # Map placeholder
+        # Map placeholder with GPS indicator
+        map_content = BoxLayout(orientation='vertical')
+        
         self.map_label = Label(
-            text='Map View\n(WebView not available on mobile yet)',
+            text='📍 GPS Tracking\n\nWaiting for location...',
             color=(0.88, 0.9, 0.93, 1.0),
-            font_size='20sp'
+            font_size='20sp',
+            halign='center'
         )
-        layout.add_widget(self.map_label)
+        map_content.add_widget(self.map_label)
+        
+        # GPS status
+        self.gps_status = Label(
+            text='GPS: Disabled',
+            color=(0.53, 0.57, 0.69, 1.0),
+            font_size='14sp',
+            size_hint_y=None,
+            height=dp(30)
+        )
+        map_content.add_widget(self.gps_status)
+        
+        layout.add_widget(map_content)
         
         self.add_widget(layout)
         self.map_token = None
         self.map_server = None
+        self.is_tracking = False
     
     def load_map(self, token, server_url):
-        """Load the map (placeholder for now)"""
+        """Load the map"""
         self.map_token = token
         self.map_server = server_url
-        self.map_label.text = f'🗺️ Map loaded\nToken: {token[:20]}...'
+        self.map_label.text = f'📍 GPS Tracking Active\n\nToken: {token[:20]}...\nServer: {server_url[:30]}...'
+        self.start_gps()
+    
+    def start_gps(self):
+        """Start GPS tracking on Android"""
+        if platform == 'android':
+            try:
+                def on_location(**kwargs):
+                    lat = kwargs.get('lat', '0')
+                    lon = kwargs.get('lon', '0')
+                    self.map_label.text = f'📍 GPS Tracking\n\nLatitude: {lat}\nLongitude: {lon}\nAccuracy: {kwargs.get("accuracy", "N/A")}m'
+                    self.gps_status.text = 'GPS: Active ✅'
+                    self.gps_status.color = (0.3, 0.78, 0.31, 1.0)
+                
+                def on_status(**kwargs):
+                    status = kwargs.get('status', '')
+                    if status == 'provider_enabled':
+                        self.gps_status.text = 'GPS: Enabled'
+                        self.gps_status.color = (0.39, 1.0, 0.85, 1.0)
+                    elif status == 'provider_disabled':
+                        self.gps_status.text = 'GPS: Disabled'
+                        self.gps_status.color = (0.53, 0.57, 0.69, 1.0)
+                
+                gps.configure(on_location=on_location, on_status=on_status)
+                gps.start(1000, 0)  # Update every second
+                self.is_tracking = True
+                self.gps_status.text = 'GPS: Starting...'
+                self.gps_status.color = (0.39, 1.0, 0.85, 1.0)
+            except Exception as e:
+                self.gps_status.text = f'GPS Error: {str(e)[:30]}'
+                self.gps_status.color = (1, 0.27, 0.21, 1.0)
+        else:
+            self.gps_status.text = 'GPS: Desktop (simulated)'
+            self.gps_status.color = (0.53, 0.57, 0.69, 1.0)
+            # Simulate GPS for testing
+            self.simulate_gps()
+    
+    def simulate_gps(self):
+        """Simulate GPS for desktop testing"""
+        import random
+        def update_location(dt):
+            if not self.is_tracking:
+                return
+            lat = -13.9833 + random.uniform(-0.01, 0.01)
+            lon = 33.7833 + random.uniform(-0.01, 0.01)
+            self.map_label.text = f'📍 GPS Tracking (Simulated)\n\nLatitude: {lat:.6f}\nLongitude: {lon:.6f}'
+        Clock.schedule_interval(update_location, 1)
+    
+    def stop_gps(self):
+        """Stop GPS tracking"""
+        if platform == 'android' and self.is_tracking:
+            try:
+                gps.stop()
+                self.is_tracking = False
+                self.gps_status.text = 'GPS: Stopped'
+                self.gps_status.color = (0.53, 0.57, 0.69, 1.0)
+            except:
+                pass
     
     def go_back(self, instance):
         """Go back to connect screen"""
+        self.stop_gps()
         self.manager.current = 'connect'
 
 class AccountScreen(Screen):
@@ -474,52 +675,107 @@ class AccountScreen(Screen):
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        layout = BoxLayout(orientation='vertical', padding=dp(16), spacing=dp(12))
+        layout = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(15))
+        
+        # Header
+        header = Label(
+            text='👤 Account',
+            font_size='24sp',
+            bold=True,
+            color=(0.39, 1.0, 0.85, 1.0),
+            size_hint_y=None,
+            height=dp(50)
+        )
+        layout.add_widget(header)
+        
+        # Card background
+        card = BoxLayout(orientation='vertical', spacing=dp(10), padding=dp(15))
+        card.canvas.before.clear()
+        with card.canvas.before:
+            Color(0.08, 0.1, 0.18, 1)
+            RoundedRectangle(pos=card.pos, size=card.size, radius=[15])
+        card.bind(pos=card.update_canvas, size=card.update_canvas)
         
         self.name_label = Label(
             text='Not logged in',
             font_size='18sp',
             bold=True,
-            color=(0.88, 0.9, 0.93, 1.0)
+            color=(0.88, 0.9, 0.93, 1.0),
+            size_hint_y=None,
+            height=dp(35)
         )
-        layout.add_widget(self.name_label)
+        card.add_widget(self.name_label)
         
         self.email_label = Label(
             text='',
             font_size='14sp',
-            color=(0.53, 0.57, 0.69, 1.0)
+            color=(0.53, 0.57, 0.69, 1.0),
+            size_hint_y=None,
+            height=dp(30)
         )
-        layout.add_widget(self.email_label)
+        card.add_widget(self.email_label)
         
         self.org_label = Label(
             text='',
             font_size='14sp',
-            color=(0.53, 0.57, 0.69, 1.0)
+            color=(0.53, 0.57, 0.69, 1.0),
+            size_hint_y=None,
+            height=dp(30)
         )
-        layout.add_widget(self.org_label)
+        card.add_widget(self.org_label)
+        
+        # Divider
+        divider = Widget(size_hint_y=None, height=dp(1))
+        with divider.canvas:
+            Color(0.2, 0.22, 0.32, 1)
+            Rectangle(pos=divider.pos, size=divider.size)
+        divider.bind(pos=divider.update_canvas, size=divider.update_canvas)
+        card.add_widget(divider)
         
         self.status_label = Label(
             text='Status: Disconnected',
             font_size='14sp',
-            color=(0.53, 0.57, 0.69, 1.0)
+            color=(0.53, 0.57, 0.69, 1.0),
+            size_hint_y=None,
+            height=dp(30)
         )
-        layout.add_widget(self.status_label)
+        card.add_widget(self.status_label)
+        
+        layout.add_widget(card)
         
         # Disconnect button
         disconnect_btn = Button(
             text='🚪 Disconnect',
             background_color=(0.96, 0.26, 0.21, 1.0),
+            color=(1, 1, 1, 1),
             size_hint_y=None,
             height=dp(48),
+            bold=True,
             pos_hint={'center_x': 0.5}
         )
         disconnect_btn.bind(on_press=self.disconnect)
         layout.add_widget(disconnect_btn)
         
-        layout.add_widget(Label())  # Spacer
+        # Version info
+        version = Label(
+            text='MzindaTrack v1.0.0',
+            font_size='12sp',
+            color=(0.42, 0.48, 0.56, 1.0),
+            size_hint_y=None,
+            height=dp(30)
+        )
+        layout.add_widget(version)
+        
+        layout.add_widget(Widget())  # Spacer
         
         self.add_widget(layout)
         self.user_info = None
+    
+    def update_canvas(self, instance, *args):
+        instance.canvas.before.clear()
+        with instance.canvas.before:
+            Color(0.08, 0.1, 0.18, 1)
+            RoundedRectangle(pos=instance.pos, size=instance.size, radius=[15])
     
     def set_user_info(self, user_info):
         """Set user information"""
@@ -540,14 +796,24 @@ class AccountScreen(Screen):
         self.status_label.text = 'Status: Disconnected'
         self.status_label.color = (0.53, 0.57, 0.69, 1.0)
         
+        # Stop GPS if running
+        if hasattr(self.manager, 'get_screen'):
+            map_screen = self.manager.get_screen('map')
+            if map_screen:
+                map_screen.stop_gps()
+        
         self.manager.current = 'connect'
 
 class MzindaTrackApp(App):
     """Main application class"""
     
     def build(self):
+        # Set window size for desktop
         Window.size = (400, 700)
         Window.clearcolor = (0.04, 0.06, 0.12, 1.0)
+        
+        # Set app title
+        self.title = 'MzindaTrack'
         
         # Create screen manager
         self.sm = ScreenManager()
@@ -573,6 +839,11 @@ class MzindaTrackApp(App):
         """Open the map screen"""
         self.map_screen.load_map(token, server_url)
         self.sm.current = 'map'
+    
+    def on_stop(self):
+        """Stop GPS when app closes"""
+        if hasattr(self, 'map_screen'):
+            self.map_screen.stop_gps()
 
 def main():
     """Main entry point"""
