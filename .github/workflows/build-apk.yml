@@ -14,19 +14,30 @@ jobs:
       uses: actions/checkout@v4
     
     - name: Build APK
+      env:
+        BUILDOZER_IGNORE_ROOT: "1"
       run: |
         docker run --rm \
+          -e BUILDOZER_IGNORE_ROOT=1 \
           -v $(pwd):/home/user/hostapp \
           -v ~/.buildozer:/home/user/.buildozer \
           kivy/buildozer:latest \
           bash -c "
             cd /home/user/hostapp
-            # Fix requirements
-            sed -i 's/requirements = .*/requirements = python3==3.9.5,kivy==2.1.0,requests,plyer,kivy-garden.xwebview/g' buildozer.spec
-            # Build
-            buildozer android debug
-            # Show results
-            ls -la bin/ || echo 'No APK found'
+            
+            # Modify spec to include WebView gradle dependencies
+            echo 'android.gradle_dependencies = com.android.support:webview:latest' >> buildozer.spec
+            
+            # Build with verbose output
+            buildozer -v android debug
+            
+            # Check if APK was created
+            if ls -la bin/*.apk 2>/dev/null; then
+              echo '✅ APK built successfully!'
+            else
+              echo '❌ No APK found - check logs'
+              tail -n 100 /home/user/.buildozer/logs/*.log
+            fi
           "
     
     - name: Upload APK
@@ -36,3 +47,12 @@ jobs:
         name: mzindatrack-apk
         path: bin/*.apk
         retention-days: 30
+    
+    - name: Upload build logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs
+        path: |
+          ~/.buildozer/logs/*.log
+        retention-days: 7
