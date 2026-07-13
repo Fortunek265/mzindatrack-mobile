@@ -2,40 +2,29 @@ name: Build MzindaTrack APK
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main ]
   workflow_dispatch:
-    inputs:
-      debug:
-        description: 'Build debug APK'
-        required: true
-        default: true
-        type: boolean
-      upload_artifacts:
-        description: 'Upload APK artifacts'
-        required: true
-        default: true
-        type: boolean
 
 jobs:
   build:
-    name: Build APK
     runs-on: ubuntu-latest
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
-
+      uses: actions/checkout@v3
+    
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
-
-    - name: Install system dependencies
+        python-version: '3.9'
+    
+    - name: Install dependencies
       run: |
-        sudo apt-get update
-        sudo apt-get install -y \
+        sudo apt update
+        sudo apt install -y \
+          build-essential \
           git \
           zip \
           unzip \
@@ -51,193 +40,31 @@ jobs:
           libffi-dev \
           libssl-dev \
           liblzma-dev \
-          libsqlite3-dev \
           libbz2-dev \
-          libreadline-dev \
-          libgdbm-dev \
-          libdb-dev \
-          libexpat1-dev \
-          libmpdec-dev \
-          tk-dev \
-          uuid-dev \
-          imagemagick \
-          python3-pip \
-          python3-dev \
-          build-essential \
-          libsdl2-dev \
-          libsdl2-image-dev \
-          libsdl2-mixer-dev \
-          libsdl2-ttf-dev \
-          libportmidi-dev \
-          libswscale-dev \
-          libavformat-dev \
-          libavcodec-dev \
+          libsqlite3-dev \
+          libopenblas-dev \
+          libxml2-dev \
+          libxslt1-dev \
+          libjpeg-dev \
+          libpng-dev \
+          libtiff-dev \
           libfreetype6-dev \
-          libgl1-mesa-dev \
-          libgles2-mesa-dev \
-          libglew-dev \
-          libmtdev-dev \
-          xclip \
-          xsel
-
-    - name: Install Python dependencies
+          libgdbm-dev \
+          libnss3-dev \
+          libatk-bridge2.0-dev \
+          libgtk-3-dev
+    
+    - name: Install buildozer
       run: |
-        python -m pip install --upgrade pip
-        pip install --upgrade buildozer cython virtualenv setuptools
-        pip install --upgrade --force-reinstall Cython==0.29.36
-
-    - name: Create assets and icon
-      run: |
-        mkdir -p assets
-        
-        # Create a simple GPS icon using ImageMagick
-        if [ ! -f assets/gps.png ]; then
-          echo "Creating GPS icon..."
-          # Create a circular blue icon with a GPS pin
-          convert -size 512x512 xc:transparent \
-            -fill '#4A6CF7' -draw 'circle 256,256 256,50' \
-            -fill 'white' \
-            -draw 'circle 256,256 256,180' \
-            -draw 'circle 256,256 256,220' \
-            assets/gps.png
-          
-          # Also create a smaller icon for the buildozer spec
-          convert assets/gps.png -resize 128x128 assets/gps_icon.png
-          cp assets/gps_icon.png assets/gps_icon.jpg
-          
-          # Create a simple presplash image
-          convert -size 1080x1920 xc:'#0A0E1A' \
-            -fill '#4A6CF7' -draw 'circle 540,600 540,300' \
-            -fill 'white' -pointsize 60 -font Arial \
-            -annotate +540+800 'MzindaTrack' \
-            -gravity center \
-            -pointsize 30 -annotate +0+50 'GPS yathu, Chitetezo chathu' \
-            assets/presplash.png
-        fi
-        
-        # Create icon file for buildozer
-        cp assets/gps.png assets/gps.icon 2>/dev/null || true
-
-    - name: Cache buildozer
-      uses: actions/cache@v3
-      with:
-        path: |
-          .buildozer
-          ~/.cache/pip
-          ~/.android
-          ~/.gradle
-          ~/.local/share/buildozer
-        key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
-        restore-keys: |
-          ${{ runner.os }}-buildozer-
-
-    - name: Setup Java environment
-      run: |
-        echo "JAVA_HOME=$(readlink -f /usr/lib/jvm/java-17-openjdk-amd64)" >> $GITHUB_ENV
-        echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
-
+        pip install --upgrade pip
+        pip install buildozer cython
+    
     - name: Build APK
       run: |
-        # Clean previous build if exists
-        rm -rf .buildozer || true
-        
-        # Build the APK with debug mode
-        if [ "${{ github.event.inputs.debug }}" == "true" ]; then
-          buildozer -v android debug
-        else
-          buildozer -v android release
-        fi
-      timeout-minutes: 45
-      continue-on-error: false
-
-    - name: List built files
-      if: always()
-      run: |
-        echo "=== Built files ==="
-        ls -la bin/ || echo "No files in bin directory"
-        echo "=== APK files ==="
-        find . -name "*.apk" -type f -exec ls -lah {} \;
-
-    - name: Verify APK
-      if: success()
-      run: |
-        APK_FILE=$(find bin -name "*.apk" -type f | head -n 1)
-        if [ -n "$APK_FILE" ]; then
-          echo "APK built successfully: $APK_FILE"
-          echo "APK size: $(du -h $APK_FILE | cut -f1)"
-          file $APK_FILE
-        else
-          echo "No APK file found!"
-          exit 1
-        fi
-
+        buildozer android debug deploy
+    
     - name: Upload APK
-      if: inputs.upload_artifacts != false && success()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
         name: mzindatrack-apk
         path: bin/*.apk
-        retention-days: 30
-        if-no-files-found: error
-
-    - name: Upload APK to release
-      if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: v1.0.${{ github.run_number }}
-        name: MzindaTrack v1.0.${{ github.run_number }}
-        body: |
-          ## MzindaTrack Mobile APK
-          
-          ### Features:
-          - 🛰️ GPS Tracking with 2-meter precision
-          - 📍 Real-time location updates
-          - 📱 User-friendly mobile interface
-          - 🔐 Token-based authentication
-          - 🔄 Auto-connect functionality
-          - 🌐 Multiple server support
-          
-          ### Installation:
-          1. Download the APK file
-          2. Enable "Install from Unknown Sources" in Android settings
-          3. Install the APK
-          4. Open the app and enter your credentials
-          
-          ### System Requirements:
-          - Android 5.0 (API 21) or higher
-          - Internet connection
-          - GPS enabled for tracking
-          
-          ### Quick Start:
-          1. Enter the server URL
-          2. Paste your access token
-          3. Verify token
-          4. Start tracking!
-          
-          ### Changelog:
-          - Initial release with GPS tracking
-          - Secure authentication system
-          - User-friendly interface
-        files: bin/*.apk
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Upload build logs
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-logs
-        path: |
-          .buildozer/logs
-          bin/*.log
-          *.log
-        retention-days: 7
-
-    - name: Cleanup
-      if: always()
-      run: |
-        # Clean up large files to save space
-        rm -rf .buildozer/cache || true
-        rm -rf ~/.gradle/caches || true
