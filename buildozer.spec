@@ -1,5 +1,8 @@
 [app]
 
+# (str) Force NDK path (for CI/CD)
+android.ndk_path = /home/runner/.buildozer/android/platform/android-ndk-r23c
+
 # (str) Title of your application
 title = MzindaTrack
 
