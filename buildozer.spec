@@ -16,37 +16,25 @@ source.dir = .
 source.include_exts = py,png,jpg,kv,atlas,ico,json
 
 # (list) List of inclusions using pattern matching
-#source.include_patterns = assets/*,*.py
+source.include_patterns = assets/*,*.py
 
 # (list) Source files to exclude (let empty to not exclude anything)
-#source.exclude_exts = spec
+source.exclude_exts = spec
 
 # (list) List of directory names to not include
-#source.exclude_dirs = tests, bin, __pycache__, .git, .github
+source.exclude_dirs = tests, bin, __pycache__, .git, .github
 
 # (list) List of exclusions using pattern matching
-#source.exclude_patterns = license, files/*.txt
+source.exclude_patterns = license,*.md
 
 # (str) Application versioning (method 1)
 version = 1.0.0
 
-# (str) Application versioning (method 2)
-# version.regex = __version__ = ['"](.*)['"]
-# version.filename = %(source.dir)s/main.py
-
 # (list) Application requirements
-# requirements = python3,kivy
-requirements = python3,kivy,requests,plyer,android
-
-# (str) Custom source folders for requirements
-# Sets custom source for any requirements with recipes
-# requirements.source.kivy = ../../kivy
-
-# (list) Garden requirements
-#garden_requirements =
+requirements = python3,kivy==2.1.0,requests,plyer,android
 
 # (str) Presplash of the application
-#presplash.filename = %(source.dir)s/data/presplash.png
+presplash.filename = %(source.dir)s/data/presplash.png
 
 # (str) Icon of the application
 icon.filename = assets/GPS.ico
@@ -55,7 +43,7 @@ icon.filename = assets/GPS.ico
 orientation = portrait
 
 # (list) List of service to declare
-#services = NAME:ENTRYPOINT_TO_PY,NAME2:ENTRYPOINT2_TO_PY
+#services = NAME:ENTRYPOINT_TO_PY
 
 #
 # OSX Specific
@@ -85,16 +73,16 @@ fullscreen = 0
 #android.presplash_color = #FFFFFF
 
 # (list) Permissions
-android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION,ACCESS_BACKGROUND_LOCATION
+android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION
 
 # (int) Target Android API, should be as high as possible.
-android.api = 31
+android.api = 30
 
 # (int) Minimum API your APK will support.
 android.minapi = 21
 
 # (int) Android SDK version to use
-#android.sdk = 31
+#android.sdk = 30
 
 # (str) Android NDK version to use
 #android.ndk = 23b
@@ -121,7 +109,7 @@ android.minapi = 21
 
 # (bool) If True, then automatically accept SDK license
 # agreements. This is intended for automation only.
-# android.accept_sdk_license = False
+android.accept_sdk_license = True
 
 # (str) Android entry point, default is ok for Kivy-based app
 #android.entrypoint = org.kivy.android.PythonActivity
@@ -151,19 +139,16 @@ android.minapi = 21
 # android.add_aars =
 
 # (list) Gradle dependencies to add
-android.gradle_dependencies = 'com.google.android.gms:play-services-location:21.0.1'
+#android.gradle_dependencies =
 
 # (bool) Enable AndroidX support. Enable when using AndroidX
 #android.use_androidx = False
 
 # (str) android.gradle_plugin_dependencies =
-# android.gradle_plugin_dependencies = 'com.google.gms:google-services:4.3.13'
+# android.gradle_plugin_dependencies =
 
 # (bool) Enable automated signing of the release APK
-# android.force_apk_obfuscation = False
-
-# (bool) Enable automated signing of the release APK
-#android.enable_apk_signing = True
+# android.enable_apk_signing = False
 
 # (str) keystore file path
 # android.keystore_path = path/to/keystore
@@ -226,21 +211,6 @@ android.arch = armeabi-v7a
 # (str) Bootstrap to use for android builds
 # p4a.bootstrap = sdl2
 
-# (bool) If True, use the SDL 2 back-end instead of SDL 1.2 (default True)
-#ios.use_sdl2 = True
-
-# (bool) If True, use the iOS back-end instead of the kivy back-end (default False)
-#ios.use_kivy = False
-
-# (list) List of iOS frameworks to add
-#ios.frameworks = UIKit, CoreLocation, MapKit
-
-# (list) List of iOS plist elements to add
-#ios.plist_elems = <key>UIBackgroundModes</key><array><string>location</string></array>
-
-# (str) iOS bundle identifier
-#ios.bundle_identifier = com.yourcompany.mzindatrack
-
 #
 # iOS specific
 #
@@ -287,47 +257,6 @@ android.arch = armeabi-v7a
 # (str) iOS launch image
 #ios.launch_image.filename = %(source.dir)s/data/launch.png
 
-# (list) iOS source files to include
-#ios.source.include_exts = py,png,jpg,kv,atlas,ico,json
-
-# (list) iOS source files to exclude
-#ios.source.exclude_exts = spec
-
-#
-# Windows specific
-#
-
-# (list) Windows requirements
-# windows.requirements = kivy
-
-# (str) Windows entry point
-# windows.entrypoint = main.py
-
-# (str) Windows icon
-# windows.icon.filename = %(source.dir)s/data/icon.ico
-
-#
-# Web specific
-#
-
-# (str) Web entry point
-# web.entrypoint = main.py
-
-# (str) Web title
-# web.title = MzindaTrack
-
-# (str) Web icon
-# web.icon.filename = %(source.dir)s/data/icon.png
-
-# (str) Web manifest
-# web.manifest.filename = %(source.dir)s/data/manifest.json
-
-# (list) Web source files to include
-#web.source.include_exts = py,png,jpg,kv,atlas,ico,json
-
-# (list) Web source files to exclude
-#web.source.exclude_exts = spec
-
 [buildozer]
 
 # (int) Log level (0 = error only, 1 = info, 2 = debug (with command output))
@@ -341,38 +270,3 @@ warn_on_root = 1
 
 # (str) Path to build output (i.e. .apk, .ipa) storage
 # bin_dir = ./bin
-
-#    -----------------------------------------------------------------------------
-#    List as sections
-#
-#    You can define all the "list" as [section:key].
-#    Each line will be considered as a option to the list.
-#    Let's take [app] / source.exclude_patterns.
-#    Instead of doing:
-#
-#[app]
-#source.exclude_patterns = license,data/audio/*.wav,data/images/original/*
-#
-#    This can be transformed into:
-#
-#[app]
-#source.exclude_patterns = license
-#source.exclude_patterns = data/audio/*.wav
-#source.exclude_patterns = data/images/original/*
-#
-#    ---------------------------------------------------------------------
-#    Profiles
-#
-#    You can extend section / key with a profile
-#    For example, you want to deploy a "development" APK which is not restricted
-#    to a specific key (like dev-keystore) or and it's not signed.
-#    You can do this:
-#
-#    [app:development]
-#    android.keystore_path = /path/to/dev/keystore
-#    android.keystore_password = dev_password
-#    android.keystore_alias = dev_alias
-#
-#    So, you have to use the --profile development when invoking buildozer:
-#
-#    $ buildozer --profile development android debug
