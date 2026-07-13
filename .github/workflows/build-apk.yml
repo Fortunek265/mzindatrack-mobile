@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest  # Using older Ubuntu for better compatibility
+    runs-on: ubuntu-latest
     
     steps:
     - name: Checkout code
@@ -33,7 +33,6 @@ jobs:
           zlib1g-dev \
           libncurses5-dev \
           libncursesw5-dev \
-          libtinfo5 \
           cmake \
           libffi-dev \
           libssl-dev \
@@ -67,8 +66,6 @@ jobs:
         # Create a placeholder icon if missing
         if [ ! -f assets/GPS.ico ]; then
           echo "Creating placeholder icon..."
-          # Create simple icon using ImageMagick if available
-          # or touch a file to avoid missing file error
           touch assets/GPS.ico
         fi
     
