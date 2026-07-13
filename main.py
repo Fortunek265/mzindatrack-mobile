@@ -33,17 +33,7 @@ if platform == 'android':
     from plyer import gps
     from jnius import autoclass
     
-    # Request permissions on Android
-    request_permissions([
-        Permission.INTERNET,
-        Permission.ACCESS_FINE_LOCATION,
-        Permission.ACCESS_COARSE_LOCATION,
-        Permission.ACCESS_BACKGROUND_LOCATION,
-        Permission.FOREGROUND_SERVICE,
-        Permission.WAKE_LOCK,
-        Permission.ACCESS_NETWORK_STATE,
-        Permission.ACCESS_WIFI_STATE
-    ])
+    # Request permissions will be called in on_start()
 
 # Default server URLs
 DEFAULT_SERVER_URLS = [
@@ -180,13 +170,24 @@ class ConnectScreen(Screen):
         # Header with icon and title
         header = BoxLayout(orientation='vertical', size_hint_y=None, height=dp(120))
         
-        # App icon
-        icon = Image(
-            source='assets/gps.png' if os.path.exists('assets/gps.png') else '',
-            size_hint=(None, None),
-            size=(dp(64), dp(64)),
-            pos_hint={'center_x': 0.5}
-        )
+        # App icon - with fallback
+        icon_path = 'assets/gps.png'
+        if os.path.exists(icon_path):
+            icon = Image(
+                source=icon_path,
+                size_hint=(None, None),
+                size=(dp(64), dp(64)),
+                pos_hint={'center_x': 0.5}
+            )
+        else:
+            # Fallback: text-based icon
+            icon = Label(
+                text='📍',
+                font_size='48sp',
+                size_hint=(None, None),
+                size=(dp(64), dp(64)),
+                pos_hint={'center_x': 0.5}
+            )
         header.add_widget(icon)
         
         title = Label(
@@ -601,6 +602,7 @@ class MapScreen(Screen):
         self.map_token = None
         self.map_server = None
         self.is_tracking = False
+        self.gps_clock = None
     
     def load_map(self, token, server_url):
         """Load the map"""
@@ -613,6 +615,12 @@ class MapScreen(Screen):
         """Start GPS tracking on Android"""
         if platform == 'android':
             try:
+                # Check if gps module is available
+                if 'gps' not in globals():
+                    self.gps_status.text = 'GPS: Module not available'
+                    self.gps_status.color = (1, 0.27, 0.21, 1.0)
+                    return
+                
                 def on_location(**kwargs):
                     lat = kwargs.get('lat', '0')
                     lon = kwargs.get('lon', '0')
@@ -630,7 +638,7 @@ class MapScreen(Screen):
                         self.gps_status.color = (0.53, 0.57, 0.69, 1.0)
                 
                 gps.configure(on_location=on_location, on_status=on_status)
-                gps.start(1000, 0)  # Update every second
+                gps.start(1000, 0)  # Update every second, no distance filter
                 self.is_tracking = True
                 self.gps_status.text = 'GPS: Starting...'
                 self.gps_status.color = (0.39, 1.0, 0.85, 1.0)
@@ -652,13 +660,18 @@ class MapScreen(Screen):
             lat = -13.9833 + random.uniform(-0.01, 0.01)
             lon = 33.7833 + random.uniform(-0.01, 0.01)
             self.map_label.text = f'📍 GPS Tracking (Simulated)\n\nLatitude: {lat:.6f}\nLongitude: {lon:.6f}'
-        Clock.schedule_interval(update_location, 1)
+        self.gps_clock = Clock.schedule_interval(update_location, 1)
     
     def stop_gps(self):
         """Stop GPS tracking"""
+        if self.gps_clock:
+            self.gps_clock.cancel()
+            self.gps_clock = None
+        
         if platform == 'android' and self.is_tracking:
             try:
-                gps.stop()
+                if 'gps' in globals():
+                    gps.stop()
                 self.is_tracking = False
                 self.gps_status.text = 'GPS: Stopped'
                 self.gps_status.color = (0.53, 0.57, 0.69, 1.0)
@@ -690,11 +703,7 @@ class AccountScreen(Screen):
         
         # Card background
         card = BoxLayout(orientation='vertical', spacing=dp(10), padding=dp(15))
-        card.canvas.before.clear()
-        with card.canvas.before:
-            Color(0.08, 0.1, 0.18, 1)
-            RoundedRectangle(pos=card.pos, size=card.size, radius=[15])
-        card.bind(pos=card.update_canvas, size=card.update_canvas)
+        self.card = card
         
         self.name_label = Label(
             text='Not logged in',
@@ -729,7 +738,6 @@ class AccountScreen(Screen):
         with divider.canvas:
             Color(0.2, 0.22, 0.32, 1)
             Rectangle(pos=divider.pos, size=divider.size)
-        divider.bind(pos=divider.update_canvas, size=divider.update_canvas)
         card.add_widget(divider)
         
         self.status_label = Label(
@@ -771,11 +779,13 @@ class AccountScreen(Screen):
         self.add_widget(layout)
         self.user_info = None
     
-    def update_canvas(self, instance, *args):
-        instance.canvas.before.clear()
-        with instance.canvas.before:
-            Color(0.08, 0.1, 0.18, 1)
-            RoundedRectangle(pos=instance.pos, size=instance.size, radius=[15])
+    def on_size(self, *args):
+        """Update card background when size changes"""
+        if hasattr(self, 'card'):
+            self.card.canvas.before.clear()
+            with self.card.canvas.before:
+                Color(0.08, 0.1, 0.18, 1)
+                RoundedRectangle(pos=self.card.pos, size=self.card.size, radius=[15])
     
     def set_user_info(self, user_info):
         """Set user information"""
@@ -786,6 +796,7 @@ class AccountScreen(Screen):
             self.org_label.text = f'🏢 {user_info["organisation"]}'
         self.status_label.text = '✅ Account Active'
         self.status_label.color = (0.3, 0.78, 0.31, 1.0)
+        self.on_size()  # Update card background
     
     def disconnect(self, instance):
         """Disconnect from the app"""
@@ -829,6 +840,24 @@ class MzindaTrackApp(App):
         self.sm.add_widget(self.account_screen)
         
         return self.sm
+    
+    def on_start(self):
+        """Called when app starts - request permissions on Android"""
+        if platform == 'android':
+            try:
+                from android.permissions import request_permissions, Permission
+                request_permissions([
+                    Permission.INTERNET,
+                    Permission.ACCESS_FINE_LOCATION,
+                    Permission.ACCESS_COARSE_LOCATION,
+                    Permission.ACCESS_BACKGROUND_LOCATION,
+                    Permission.FOREGROUND_SERVICE,
+                    Permission.WAKE_LOCK,
+                    Permission.ACCESS_NETWORK_STATE,
+                    Permission.ACCESS_WIFI_STATE
+                ])
+            except Exception as e:
+                print(f"Permission request error: {e}")
     
     def show_account_screen(self, user_info):
         """Show account screen with user info"""
