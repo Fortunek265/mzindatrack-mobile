@@ -63,6 +63,32 @@ jobs:
         python3 -m pip install --upgrade pip
         python3 -m pip install buildozer cython virtualenv Pillow
     
+    - name: Initialize buildozer and pre-download SDK
+      run: |
+        # Initialize buildozer
+        buildozer init
+        
+        # Force SDK download by attempting a dry run
+        buildozer android debug || true
+        
+        # Clean up any failed build artifacts but keep SDK
+        rm -rf .buildozer/bin .buildozer/.gradle .buildozer/.cache
+        
+        # Ensure SDK tools are properly installed
+        export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
+        export PATH=$PATH:$ANDROID_HOME/tools/bin:$ANDROID_HOME/platform-tools
+        
+        # Install missing build tools using sdkmanager if available
+        if [ -f "$ANDROID_HOME/tools/bin/sdkmanager" ]; then
+          echo "✅ sdkmanager found, installing build-tools..."
+          yes | $ANDROID_HOME/tools/bin/sdkmanager --licenses || true
+          $ANDROID_HOME/tools/bin/sdkmanager --install "build-tools;33.0.2" "platform-tools" "platforms;android-33" || true
+        else
+          echo "⚠️ sdkmanager not found, will let buildozer handle it"
+        fi
+        
+        echo "✅ Buildozer initialized"
+    
     - name: Create assets and data directories with placeholder images
       run: |
         mkdir -p assets data
@@ -106,8 +132,12 @@ jobs:
     
     - name: Build APK
       run: |
-        # Clean previous builds
-        rm -rf .buildozer bin || true
+        # Set ANDROID_HOME to where buildozer expects it
+        export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
+        export PATH=$PATH:$ANDROID_HOME/tools/bin:$ANDROID_HOME/platform-tools
+        
+        # Clean previous builds but keep SDK
+        rm -rf .buildozer/bin .buildozer/.gradle .buildozer/.cache || true
         
         # Build with debug output
         buildozer -v android debug
@@ -144,4 +174,5 @@ jobs:
         path: |
           .buildozer/logs/*.log
           .buildozer/**/*.log
+          .buildozer/android/platform/*.log
         retention-days: 7
