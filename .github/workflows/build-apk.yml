@@ -1,4 +1,4 @@
-name: Build MzindaTrack APK
+name: Build MzindaTrack APK (Docker)
 
 on:
   push:
@@ -13,57 +13,26 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.9'
-    
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
-    
-    - name: Install Buildozer
-      run: |
-        pip install buildozer cython
-    
-    - name: Fix buildozer.spec
-      run: |
-        # Keep Python 3.9.5 (more stable for your app)
-        sed -i 's/requirements = .*/requirements = python3==3.9.5,kivy==2.1.0,requests,plyer,kivy-garden.xwebview/g' buildozer.spec
-        sed -i '/^android.ndk_path/d' buildozer.spec
-        # Remove problematic lines
-        sed -i '/^android.arch = arm64-v8a/a android.archs = arm64-v8a' buildozer.spec
-    
     - name: Build APK
       run: |
-        echo "📦 Starting APK build..."
-        buildozer android debug
-        
-        # Debug: Check if APK was created
-        echo "📁 Checking bin directory..."
-        ls -la bin/ || echo "bin directory doesn't exist"
-        
-        # Check build logs
-        echo "📄 Recent build log entries:"
-        tail -n 50 ~/.buildozer/logs/*.log 2>/dev/null || echo "No logs found"
+        docker run --rm \
+          -v $(pwd):/home/user/hostapp \
+          -v ~/.buildozer:/home/user/.buildozer \
+          kivy/buildozer:latest \
+          bash -c "
+            cd /home/user/hostapp
+            # Fix requirements
+            sed -i 's/requirements = .*/requirements = python3==3.9.5,kivy==2.1.0,requests,plyer,kivy-garden.xwebview/g' buildozer.spec
+            # Build
+            buildozer android debug
+            # Show results
+            ls -la bin/ || echo 'No APK found'
+          "
     
     - name: Upload APK
       if: success()
       uses: actions/upload-artifact@v4
       with:
         name: mzindatrack-apk
-        path: |
-          bin/*.apk
-          bin/*.aab
+        path: bin/*.apk
         retention-days: 30
-    
-    - name: Upload full build logs
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-logs
-        path: |
-          ~/.buildozer/logs/*.log
-          buildozer.log
-        retention-days: 7
