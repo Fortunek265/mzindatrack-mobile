@@ -8,7 +8,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: kivy/buildozer:latest
+    container:
+      image: kivy/buildozer:latest
+      options: --user 1001
     
     steps:
     - name: Checkout code
@@ -20,9 +22,6 @@ jobs:
         sed -i '/^android.ndk_path/d' buildozer.spec
     
     - name: Build APK
-      env:
-        # Skip root check
-        BUILDOZER_IGNORE_ROOT: 1
       run: buildozer -v android debug
     
     - name: Upload APK
