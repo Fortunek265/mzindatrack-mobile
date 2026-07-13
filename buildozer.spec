@@ -35,7 +35,8 @@ version = 1.0.0
 # version.filename = %(source.dir)s/main.py
 
 # (list) Application requirements
-requirements = python3,kivy,requests,PyNaCl,plyer,pyjnius,android,openssl
+# Core requirements for the app to work
+requirements = python3,kivy==2.3.0,requests==2.31.0,plyer==2.1,pyjnius==1.5.0,android==1.0
 
 # (str) Custom source folders for requirements
 # requirements.source = requirements
@@ -44,10 +45,10 @@ requirements = python3,kivy,requests,PyNaCl,plyer,pyjnius,android,openssl
 # garden_requirements =
 
 # (str) Presplash of the application
-# presplash.filename = assets/presplash.png
+presplash.filename = assets/presplash.png
 
 # (str) Icon of the application
-icon.filename = assets/gps.icon
+icon.filename = assets/gps.png
 
 # (str) Supported orientation (one of landscape, sensorLandscape, portrait or all)
 orientation = portrait
@@ -69,14 +70,11 @@ orientation = portrait
 # version.regex = __version__ = ['"](.*)['"]
 # version.filename = %(source.dir)s/main.py
 
-# (list) Application requirements
-# requirements = python3,kivy
-
 # (list) Library requirements for Android
-android.add_src = src
+# android.add_src = 
 
 # (list) Permissions
-android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION,ACCESS_BACKGROUND_LOCATION,FOREGROUND_SERVICE,WAKE_LOCK,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE
+android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION,ACCESS_BACKGROUND_LOCATION,FOREGROUND_SERVICE,WAKE_LOCK,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE
 
 # (int) Target Android API, should be as high as possible.
 android.api = 33
@@ -84,11 +82,8 @@ android.api = 33
 # (int) Minimum API your APK will support.
 android.minapi = 21
 
-# (int) Android SDK version to use
-android.sdk = 33
-
 # (str) Android NDK version to use
-android.ndk = 23b
+android.ndk = 25c
 
 # (int) Android NDK API to use. This is the minimum API your app will support, it should usually match android.minapi.
 android.ndk_api = 21
@@ -109,7 +104,8 @@ android.enable_androidx = True
 # android.add_src =
 
 # (list) Gradle dependencies to add
-android.gradle_dependencies = 'com.google.android.gms:play-services-location:21.0.1','com.google.android.gms:play-services-maps:18.1.0','com.google.android.material:material:1.9.0'
+# Google Play Services for location and maps
+android.gradle_dependencies = 'com.google.android.gms:play-services-location:21.0.1'
 
 # (list) Java classes to add
 # android.add_java_class =
@@ -246,24 +242,6 @@ android.logcat_filters = *:S Python:D
 
 # (list) Arguments to pass to the application. These will be accessible via sys.argv
 # window.args =
-
-# (str) The default directory for the application. Use %(app)s to get the application directory
-# window.default_dir = %(app)s
-
-# (str) The default file for the application
-# window.default_file = %(app)s/default.txt
-
-# (str) The default directory for the application files. Use %(app)s to get the application directory
-# window.default_file_dir = %(app)s
-
-# (str) The default file for the application. Use %(app)s to get the application directory
-# window.default_file = %(app)s/default.txt
-
-# (str) The default directory for the application. Use %(app)s to get the application directory
-# window.default_dir = %(app)s
-
-# (str) The default file for the application. Use %(app)s to get the application directory
-# window.default_file = %(app)s/default.txt
 
 [buildozer]
 
