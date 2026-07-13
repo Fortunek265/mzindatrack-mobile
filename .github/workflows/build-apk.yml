@@ -8,9 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: kivy/buildozer:latest
-      options: --user 1001
+    container: kivy/buildozer:latest
     
     steps:
     - name: Checkout code
@@ -22,7 +20,11 @@ jobs:
         sed -i '/^android.ndk_path/d' buildozer.spec
     
     - name: Build APK
-      run: buildozer -v android debug
+      env:
+        BUILDOZER_IGNORE_ROOT: "1"
+      run: |
+        echo "🚀 Building APK..."
+        buildozer -v android debug 2>&1 | tee build.log
     
     - name: Upload APK
       if: success()
@@ -31,3 +33,13 @@ jobs:
         name: mzindatrack-apk
         path: bin/*.apk
         retention-days: 30
+    
+    - name: Upload logs on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs
+        path: |
+          build.log
+          .buildozer/logs/*.log
+        retention-days: 7
