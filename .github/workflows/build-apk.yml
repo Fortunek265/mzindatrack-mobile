@@ -30,7 +30,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
+        python-version: '3.11'
 
     - name: Install system dependencies
       run: |
@@ -60,30 +60,63 @@ jobs:
           libmpdec-dev \
           tk-dev \
           uuid-dev \
-          imagemagick
+          imagemagick \
+          python3-pip \
+          python3-dev \
+          build-essential \
+          libsdl2-dev \
+          libsdl2-image-dev \
+          libsdl2-mixer-dev \
+          libsdl2-ttf-dev \
+          libportmidi-dev \
+          libswscale-dev \
+          libavformat-dev \
+          libavcodec-dev \
+          libfreetype6-dev \
+          libgl1-mesa-dev \
+          libgles2-mesa-dev \
+          libglew-dev \
+          libmtdev-dev \
+          xclip \
+          xsel
 
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install buildozer cython virtualenv
+        pip install --upgrade buildozer cython virtualenv setuptools
+        pip install --upgrade --force-reinstall Cython==0.29.36
 
-    - name: Create assets directory and icon
+    - name: Create assets and icon
       run: |
         mkdir -p assets
         
-        # Create a GPS icon if not exists
-        if [ ! -f assets/gps.icon ]; then
+        # Create a simple GPS icon using ImageMagick
+        if [ ! -f assets/gps.png ]; then
           echo "Creating GPS icon..."
+          # Create a circular blue icon with a GPS pin
           convert -size 512x512 xc:transparent \
-            -fill '#667eea' -draw 'circle 256,256 256,50' \
-            -fill 'white' -draw 'circle 256,256 256,180' \
-            -fill '#667eea' -draw 'line 256,100 256,220' \
-            -fill '#667eea' -draw 'line 256,292 256,412' \
-            -fill '#667eea' -draw 'line 100,256 220,256' \
-            -fill '#667eea' -draw 'line 292,256 412,256' \
+            -fill '#4A6CF7' -draw 'circle 256,256 256,50' \
+            -fill 'white' \
+            -draw 'circle 256,256 256,180' \
+            -draw 'circle 256,256 256,220' \
             assets/gps.png
-          cp assets/gps.png assets/gps.icon
+          
+          # Also create a smaller icon for the buildozer spec
+          convert assets/gps.png -resize 128x128 assets/gps_icon.png
+          cp assets/gps_icon.png assets/gps_icon.jpg
+          
+          # Create a simple presplash image
+          convert -size 1080x1920 xc:'#0A0E1A' \
+            -fill '#4A6CF7' -draw 'circle 540,600 540,300' \
+            -fill 'white' -pointsize 60 -font Arial \
+            -annotate +540+800 'MzindaTrack' \
+            -gravity center \
+            -pointsize 30 -annotate +0+50 'GPS yathu, Chitetezo chathu' \
+            assets/presplash.png
         fi
+        
+        # Create icon file for buildozer
+        cp assets/gps.png assets/gps.icon 2>/dev/null || true
 
     - name: Cache buildozer
       uses: actions/cache@v3
@@ -93,30 +126,62 @@ jobs:
           ~/.cache/pip
           ~/.android
           ~/.gradle
+          ~/.local/share/buildozer
         key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
         restore-keys: |
           ${{ runner.os }}-buildozer-
 
+    - name: Setup Java environment
+      run: |
+        echo "JAVA_HOME=$(readlink -f /usr/lib/jvm/java-17-openjdk-amd64)" >> $GITHUB_ENV
+        echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+
     - name: Build APK
-      run: buildozer -v android debug
+      run: |
+        # Clean previous build if exists
+        rm -rf .buildozer || true
+        
+        # Build the APK with debug mode
+        if [ "${{ github.event.inputs.debug }}" == "true" ]; then
+          buildozer -v android debug
+        else
+          buildozer -v android release
+        fi
+      timeout-minutes: 45
+      continue-on-error: false
 
     - name: List built files
+      if: always()
       run: |
         echo "=== Built files ==="
-        ls -la bin/
+        ls -la bin/ || echo "No files in bin directory"
         echo "=== APK files ==="
-        find . -name "*.apk" -type f
+        find . -name "*.apk" -type f -exec ls -lah {} \;
+
+    - name: Verify APK
+      if: success()
+      run: |
+        APK_FILE=$(find bin -name "*.apk" -type f | head -n 1)
+        if [ -n "$APK_FILE" ]; then
+          echo "APK built successfully: $APK_FILE"
+          echo "APK size: $(du -h $APK_FILE | cut -f1)"
+          file $APK_FILE
+        else
+          echo "No APK file found!"
+          exit 1
+        fi
 
     - name: Upload APK
-      if: inputs.upload_artifacts != false
+      if: inputs.upload_artifacts != false && success()
       uses: actions/upload-artifact@v4
       with:
         name: mzindatrack-apk
         path: bin/*.apk
         retention-days: 30
+        if-no-files-found: error
 
     - name: Upload APK to release
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
       uses: softprops/action-gh-release@v1
       with:
         tag_name: v1.0.${{ github.run_number }}
@@ -125,14 +190,15 @@ jobs:
           ## MzindaTrack Mobile APK
           
           ### Features:
-          - GPS Tracking with 2-meter precision
-          - Real-time location updates
-          - User-friendly mobile interface
-          - Token-based authentication
-          - Auto-connect functionality
+          - 🛰️ GPS Tracking with 2-meter precision
+          - 📍 Real-time location updates
+          - 📱 User-friendly mobile interface
+          - 🔐 Token-based authentication
+          - 🔄 Auto-connect functionality
+          - 🌐 Multiple server support
           
           ### Installation:
-          1. Download the APK
+          1. Download the APK file
           2. Enable "Install from Unknown Sources" in Android settings
           3. Install the APK
           4. Open the app and enter your credentials
@@ -141,8 +207,37 @@ jobs:
           - Android 5.0 (API 21) or higher
           - Internet connection
           - GPS enabled for tracking
+          
+          ### Quick Start:
+          1. Enter the server URL
+          2. Paste your access token
+          3. Verify token
+          4. Start tracking!
+          
+          ### Changelog:
+          - Initial release with GPS tracking
+          - Secure authentication system
+          - User-friendly interface
         files: bin/*.apk
         draft: false
         prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload build logs
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs
+        path: |
+          .buildozer/logs
+          bin/*.log
+          *.log
+        retention-days: 7
+
+    - name: Cleanup
+      if: always()
+      run: |
+        # Clean up large files to save space
+        rm -rf .buildozer/cache || true
+        rm -rf ~/.gradle/caches || true
