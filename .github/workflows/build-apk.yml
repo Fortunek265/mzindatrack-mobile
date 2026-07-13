@@ -20,6 +20,9 @@ jobs:
         sed -i '/^android.ndk_path/d' buildozer.spec
     
     - name: Build APK
+      env:
+        # Skip root check
+        BUILDOZER_IGNORE_ROOT: 1
       run: buildozer -v android debug
     
     - name: Upload APK
