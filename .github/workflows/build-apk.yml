@@ -34,12 +34,12 @@ jobs:
         python3 -m pip install --upgrade pip
         python3 -m pip install buildozer cython virtualenv Pillow
     
-    - name: Setup Android SDK
+    - name: Setup Android SDK and NDK
       run: |
-        # Create SDK directory
-        mkdir -p ~/.buildozer/android/platform/android-sdk
+        # Create directories
+        mkdir -p ~/.buildozer/android/platform
         
-        # Download command line tools
+        # Setup SDK
         cd ~/.buildozer/android/platform
         wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
         unzip -q commandlinetools-linux-9477386_latest.zip
@@ -48,20 +48,29 @@ jobs:
         
         # Set environment variables
         export ANDROID_SDK_ROOT=~/.buildozer/android/platform/android-sdk
+        export ANDROID_NDK_ROOT=~/.buildozer/android/platform/android-ndk-r23c
         export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
         
         # Accept licenses
         yes | sdkmanager --licenses > /dev/null 2>&1 || true
         
-        # Install required SDK components
+        # Install SDK components
         sdkmanager "platforms;android-33" "build-tools;33.0.2" "platform-tools" "tools" > /dev/null 2>&1
         
+        # Download NDK 23c manually (buildozer sometimes fails to download it)
+        cd ~/.buildozer/android/platform
+        wget -q https://dl.google.com/android/repository/android-ndk-r23c-linux.zip
+        unzip -q android-ndk-r23c-linux.zip
+        mv android-ndk-r23c android-ndk-r23c
+        
         echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+        echo "ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT" >> $GITHUB_ENV
         echo "PATH=$PATH" >> $GITHUB_ENV
         
-        # Verify installation
-        echo "✅ Android SDK installed successfully"
-        sdkmanager --list | grep -E "(platforms|build-tools)" | head -5 || true
+        # Verify installations
+        echo "✅ Android SDK installed"
+        echo "✅ NDK 23c installed"
+        ls -la ~/.buildozer/android/platform/
     
     - name: Create placeholder images
       run: |
@@ -95,23 +104,18 @@ jobs:
         print('✅ Images created successfully')
         "
     
-    - name: Update buildozer spec
+    - name: Update buildozer spec for NDK
       run: |
-        # Ensure buildozer.spec has correct SDK settings
+        # Force NDK path in spec
+        echo "android.ndk_path = $HOME/.buildozer/android/platform/android-ndk-r23c" >> buildozer.spec
+        # Ensure skip_update is False
         sed -i 's/android.skip_update = True/android.skip_update = False/g' buildozer.spec || true
-        sed -i 's/android.ndk = 25c/android.ndk = 23c/g' buildozer.spec || true
-        sed -i 's/android.arch = arm64-v8a/android.arch = arm64-v8a/g' buildozer.spec || true
-        
-        # Add webview requirement if missing
-        if ! grep -q "kivy-garden.xwebview" buildozer.spec; then
-          sed -i '/requirements =/ s/$/,kivy-garden.xwebview/' buildozer.spec
-        fi
-        
         echo "✅ Buildozer spec updated"
     
     - name: Build APK
       env:
-        ANDROID_SDK_ROOT: ~/.buildozer/android/platform/android-sdk
+        ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+        ANDROID_NDK_ROOT: ${{ env.ANDROID_NDK_ROOT }}
       run: |
         # Clean previous builds
         rm -rf .buildozer/bin || true
@@ -137,11 +141,3 @@ jobs:
           .buildozer/logs/*.log
           .buildozer/android/platform/build/build.log
         retention-days: 7
-    
-    - name: Upload SDK logs
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: sdk-logs
-        path: ~/.buildozer/android/platform/android-sdk
-        retention-days: 3
