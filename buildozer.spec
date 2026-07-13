@@ -16,47 +16,28 @@ source.dir = .
 source.include_exts = py,png,jpg,kv,atlas,ico,json
 
 # (list) List of inclusions using pattern matching
-source.include_patterns = assets/*,*.py
+source.include_patterns = assets/*,data/*,*.py
 
 # (list) Source files to exclude (let empty to not exclude anything)
-source.exclude_exts = spec
+source.exclude_exts = spec,md,yml,yaml
 
 # (list) List of directory names to not include
-source.exclude_dirs = tests, bin, __pycache__, .git, .github
+source.exclude_dirs = tests, bin, __pycache__, .git, .github, .buildozer
 
-# (list) List of exclusions using pattern matching
-source.exclude_patterns = license,*.md
-
-# (str) Application versioning (method 1)
+# (str) Application versioning
 version = 1.0.0
 
-# (list) Application requirements
-requirements = python3,kivy==2.1.0,requests,plyer,android
+# (list) Application requirements - REMOVED 'android' from here
+requirements = python3==3.9.5,kivy==2.1.0,requests,plyer
 
 # (str) Presplash of the application
-presplash.filename = %(source.dir)s/data/presplash.png
+presplash.filename = data/presplash.png
 
 # (str) Icon of the application
-icon.filename = assets/GPS.ico
+icon.filename = assets/icon.png
 
-# (str) Supported orientation (one of landscape, sensorLandscape, portrait or all)
+# (str) Supported orientation
 orientation = portrait
-
-# (list) List of service to declare
-#services = NAME:ENTRYPOINT_TO_PY
-
-#
-# OSX Specific
-#
-
-#
-# author = © Copyright Info
-
-# OSX icon filename
-#osx.icon.filename = %(source.dir)s/data/icon.icns
-
-# OSX bundle identifier
-#osx.bundle_identifier = com.yourcompany.mzindatrack
 
 #
 # Android Specific
@@ -65,208 +46,64 @@ orientation = portrait
 # (bool) Indicate if the application should be fullscreen or not
 fullscreen = 0
 
-# (string) Presplash background color (for android toolchain)
-# Supported formats are: #RRGGBB #AARRGGBB or one of the following names:
-# red, blue, green, black, white, gray, cyan, magenta, yellow, lightgray,
-# darkgray, grey, lightgrey, darkgrey, aqua, fuchsia, lime, maroon, navy,
-# olive, purple, silver, teal.
-#android.presplash_color = #FFFFFF
-
 # (list) Permissions
 android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION
 
-# (int) Target Android API, should be as high as possible.
-android.api = 30
+# (int) Target Android API
+android.api = 33
 
-# (int) Minimum API your APK will support.
+# (int) Minimum API your APK will support
 android.minapi = 21
 
-# (int) Android SDK version to use
-#android.sdk = 30
+# (int) Android SDK version
+android.sdk = 33
 
-# (str) Android NDK version to use
-#android.ndk = 23b
+# (str) Android NDK version - Changed to match system
+android.ndk = 25c
 
-# (int) Android NDK API to use. This is the minimum API your app will support, it should usually match android.minapi.
-#android.ndk_api = 21
+# (int) Android NDK API - Changed to match your system's NDK
+android.ndk_api = 21
 
-# (bool) Use --private data storage (True) or --dir public storage (False)
-#android.private_storage = True
+# (bool) Skip updating SDK/NDK to use system versions
+android.skip_update = True
 
-# (str) Android NDK directory (if empty, it will be automatically downloaded.)
-#android.ndk_path =
-
-# (str) Android SDK directory (if empty, it will be automatically downloaded.)
-#android.sdk_path =
-
-# (str) ANT directory (if empty, it will be automatically downloaded.)
-#android.ant_path =
-
-# (bool) If True, then skip trying to update the Android sdk
-# This can be useful to avoid excess Internet downloads or save time
-# when an update is due and you just want to test/build your package
-# android.skip_update = False
-
-# (bool) If True, then automatically accept SDK license
-# agreements. This is intended for automation only.
+# (bool) Accept SDK license
 android.accept_sdk_license = True
 
-# (str) Android entry point, default is ok for Kivy-based app
-#android.entrypoint = org.kivy.android.PythonActivity
+# (str) Android entry point
+android.entrypoint = org.kivy.android.PythonActivity
 
-# (str) Android app theme, default is ok for Kivy-based app
-# android.apptheme = "@style/Theme.AppCompat"
+# (str) Android app theme
+android.apptheme = "@style/Theme.AppCompat"
 
-# (list) Pattern to whitelist for the whole APK
-#android.whitelist =
+# (str) The Android arch to build for - Just one arch for faster build
+android.arch = arm64-v8a
 
-# (str) Path to a custom whitelist file
-#android.whitelist_src =
-
-# (str) Path to a custom blacklist file
-#android.blacklist_src =
-
-# (list) List of Java .jar files to add to the libs so that pyjnius can access
-# their classes. Don't add jars that you do not need, since extra jars can slow
-# down the build process. Allows wildcards matching, for example:
-# OUYA-ODK/lib/*.jar
-#android.add_src =
-
-# (list) List of Java files to add to the project
-#android.add_src =
-
-# (list) Java AAR archives to add
-# android.add_aars =
-
-# (list) Gradle dependencies to add
-#android.gradle_dependencies =
-
-# (bool) Enable AndroidX support. Enable when using AndroidX
-#android.use_androidx = False
-
-# (str) android.gradle_plugin_dependencies =
-# android.gradle_plugin_dependencies =
-
-# (bool) Enable automated signing of the release APK
-# android.enable_apk_signing = False
-
-# (str) keystore file path
-# android.keystore_path = path/to/keystore
-
-# (str) keystore password
-# android.keystore_password = your_password
-
-# (str) keystore alias
-# android.keystore_alias = your_alias
-
-# (str) keystore alias password
-# android.keystore_alias_password = your_alias_password
-
-# (str) Path to custom certificate for APK signing (PEM format)
-# android.release_cert =
-
-# (str) Path to custom private key for APK signing (PKCS8 format)
-# android.release_key =
-
-# (list) List of Android features to enable (e.g. android.hardware.usb.host)
-#android.features = android.hardware.location.gps
-
-# (list) List of Android features to disable
-# android.features_disable =
-
-# (list) List of Android libraries to include
-# android.libraries =
-
-# (list) List of Android activities to add
-# android.activities =
-
-# (str) Android manifest.xml element to add (quoted string)
-# android.manifest_application_element =
-# android.manifest_activity_element =
-# android.manifest_activity_launchMode =
-# android.manifest_activity_taskAffinity =
-
-# (str) Android logcat filters to use
-# android.logcat_filters = *:S python:D
+# (list) Android features to enable
+android.features = android.hardware.location.gps
 
 # (bool) Copy library instead of making a libpymodules.so
-# android.copy_libs = 1
+android.copy_libs = 1
 
-# (str) The Android arch to build for, choices: armeabi-v7a, arm64-v8a, x86, x86_64
-android.arch = armeabi-v7a
+# (bool) Enable AndroidX support
+android.use_androidx = True
 
-#
-# Python for android (p4a) specific
-#
+# (str) Python-for-android branch
+p4a.branch = develop
 
-# (str) python-for-android git clone directory (if empty, it will be automatically cloned from github)
-#p4a.source_dir =
-
-# (str) The directory in which python-for-android should look for your own build recipes (if any)
-#p4a.local_recipes =
-
-# (str) Filename to the hook for p4a
-#p4a.hook =
-
-# (str) Bootstrap to use for android builds
-# p4a.bootstrap = sdl2
-
-#
-# iOS specific
-#
-
-# (str) iOS bundle identifier
-# ios.bundle_identifier = com.yourcompany.mzindatrack
-
-# (str) iOS bundle name
-# ios.bundle_name = MzindaTrack
-
-# (str) iOS bundle version
-# ios.bundle_version = 1.0.0
-
-# (str) iOS minimum version
-# ios.minimum_version = 9.0
-
-# (str) iOS interface orientation
-# ios.interface_orientation = UIInterfaceOrientationPortrait
-
-# (str) iOS team identifier (for signing)
-# ios.team_id =
-
-# (str) iOS provisioning profile
-# ios.provisioning_profile =
-
-# (str) iOS code signing identity
-# ios.codesign_identity =
-
-# (str) iOS deployment target
-# ios.deployment_target = 9.0
-
-# (bool) Enable iOS bitcode support
-# ios.enable_bitcode = False
-
-# (list) iOS frameworks to add
-#ios.frameworks = UIKit, CoreLocation, MapKit, WebKit
-
-# (list) iOS plist elements to add
-#ios.plist_elems = <key>UIBackgroundModes</key><array><string>location</string></array>
-
-# (str) iOS app icon
-#ios.icon.filename = %(source.dir)s/data/icon.png
-
-# (str) iOS launch image
-#ios.launch_image.filename = %(source.dir)s/data/launch.png
+# (str) Bootstrap to use
+p4a.bootstrap = sdl2
 
 [buildozer]
 
-# (int) Log level (0 = error only, 1 = info, 2 = debug (with command output))
+# (int) Log level
 log_level = 2
 
-# (int) Display warning if buildozer is run as root (0 = False, 1 = True)
+# (int) Warn if root
 warn_on_root = 1
 
-# (str) Path to build artifact storage, absolute or relative to spec file
-# build_dir = ./.buildozer
+# (str) Build directory
+build_dir = ./.buildozer
 
-# (str) Path to build output (i.e. .apk, .ipa) storage
-# bin_dir = ./bin
+# (str) Binary directory
+bin_dir = ./bin
