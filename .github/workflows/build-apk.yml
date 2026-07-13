@@ -8,121 +8,19 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container: kivy/buildozer:latest
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.9'
-    
-    - name: Install system dependencies
+    - name: Fix buildozer.spec
       run: |
-        sudo apt update
-        sudo apt install -y build-essential git zip unzip openjdk-17-jdk \
-          autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev \
-          cmake libffi-dev libssl-dev liblzma-dev libbz2-dev libsqlite3-dev \
-          libopenblas-dev libxml2-dev libxslt1-dev libjpeg-dev libpng-dev \
-          libfreetype6-dev python3-pip python3-dev python3-venv wget \
-          libgl1-mesa-dev libgles2-mesa-dev
-        sudo update-alternatives --set java /usr/lib/jvm/java-17-openjdk-amd64/bin/java
-    
-    - name: Install Python packages
-      run: |
-        python3 -m pip install --upgrade pip
-        python3 -m pip install buildozer cython virtualenv Pillow
-    
-    - name: Setup Android SDK and NDK
-      run: |
-        # Create directories
-        mkdir -p ~/.buildozer/android/platform
-        
-        # Setup SDK
-        cd ~/.buildozer/android/platform
-        wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-        unzip -q commandlinetools-linux-9477386_latest.zip
-        mkdir -p android-sdk/cmdline-tools
-        mv cmdline-tools android-sdk/cmdline-tools/latest
-        
-        # Set environment variables
-        export ANDROID_SDK_ROOT=~/.buildozer/android/platform/android-sdk
-        export ANDROID_NDK_ROOT=~/.buildozer/android/platform/android-ndk-r23c
-        export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
-        
-        # Accept licenses
-        yes | sdkmanager --licenses > /dev/null 2>&1 || true
-        
-        # Install SDK components
-        sdkmanager "platforms;android-33" "build-tools;33.0.2" "platform-tools" "tools" > /dev/null 2>&1
-        
-        # Download NDK 23c manually (buildozer sometimes fails to download it)
-        cd ~/.buildozer/android/platform
-        wget -q https://dl.google.com/android/repository/android-ndk-r23c-linux.zip
-        unzip -q android-ndk-r23c-linux.zip
-        mv android-ndk-r23c android-ndk-r23c
-        
-        echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-        echo "ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT" >> $GITHUB_ENV
-        echo "PATH=$PATH" >> $GITHUB_ENV
-        
-        # Verify installations
-        echo "✅ Android SDK installed"
-        echo "✅ NDK 23c installed"
-        ls -la ~/.buildozer/android/platform/
-    
-    - name: Create placeholder images
-      run: |
-        mkdir -p assets data
-        python3 -c "
-        from PIL import Image, ImageDraw, ImageFont
-        import os
-        
-        # Create icon
-        img = Image.new('RGB', (512, 512), color='#667eea')
-        d = ImageDraw.Draw(img)
-        try:
-            font = ImageFont.truetype('/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf', 200)
-        except:
-            font = ImageFont.load_default()
-        d.text((256, 256), 'MT', fill='white', anchor='mm', font=font)
-        img.save('assets/icon.png')
-        
-        # Create presplash
-        img2 = Image.new('RGB', (1080, 1920), color='#0a0f1e')
-        d2 = ImageDraw.Draw(img2)
-        try:
-            font2 = ImageFont.truetype('/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf', 80)
-            font3 = ImageFont.truetype('/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf', 40)
-        except:
-            font2 = ImageFont.load_default()
-            font3 = ImageFont.load_default()
-        d2.text((540, 800), 'MzindaTrack', fill='#667eea', anchor='mm', font=font2)
-        d2.text((540, 950), 'GPS yathu, Chitetezo chathu', fill='#8892b0', anchor='mm', font=font3)
-        img2.save('data/presplash.png')
-        print('✅ Images created successfully')
-        "
-    
-    - name: Update buildozer spec for NDK
-      run: |
-        # Force NDK path in spec
-        echo "android.ndk_path = $HOME/.buildozer/android/platform/android-ndk-r23c" >> buildozer.spec
-        # Ensure skip_update is False
-        sed -i 's/android.skip_update = True/android.skip_update = False/g' buildozer.spec || true
-        echo "✅ Buildozer spec updated"
+        sed -i 's/requirements = .*/requirements = python3==3.10.0,kivy==2.3.0,requests,plyer/g' buildozer.spec
+        sed -i '/^android.ndk_path/d' buildozer.spec
     
     - name: Build APK
-      env:
-        ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
-        ANDROID_NDK_ROOT: ${{ env.ANDROID_NDK_ROOT }}
-      run: |
-        # Clean previous builds
-        rm -rf .buildozer/bin || true
-        rm -rf .buildozer/android/platform/build || true
-        
-        # Build with verbose output
-        buildozer -v android debug
+      run: buildozer -v android debug
     
     - name: Upload APK
       if: success()
@@ -131,13 +29,3 @@ jobs:
         name: mzindatrack-apk
         path: bin/*.apk
         retention-days: 30
-    
-    - name: Upload build logs
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-logs
-        path: |
-          .buildozer/logs/*.log
-          .buildozer/android/platform/build/build.log
-        retention-days: 7
