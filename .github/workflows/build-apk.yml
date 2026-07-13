@@ -54,7 +54,9 @@ jobs:
           python3-dev \
           python3-venv \
           wget \
-          file
+          file \
+          libgl1-mesa-dev \
+          libgles2-mesa-dev
     
     - name: Install buildozer
       run: |
@@ -72,32 +74,72 @@ jobs:
     - name: Create placeholder assets if missing
       run: |
         mkdir -p assets data
-        # Create placeholder icon if missing
-        if [ ! -f assets/GPS.ico ]; then
+        # Create placeholder icon - Android needs PNG
+        if [ ! -f assets/GPS.png ] && [ ! -f assets/GPS.ico ]; then
           echo "Creating placeholder icon..."
-          # Create a simple 1x1 pixel PNG as placeholder
-          echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" | base64 -d > assets/GPS.png
+          # Create a minimal 64x64 PNG icon
+          convert -size 64x64 xc:blue assets/GPS.png 2>/dev/null || \
+          echo "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEwAACxMBAJqcGAAAAidJREFUeJztm8lKQ0EQRRMiKoIIKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioq6Cco+r6XvufJg3j4gqLq1q3b3VUnpVIpkiRJkiRJkiRJkiRJkiTp35g8sTgA5oB5YB54BMrAitb7Vz9RwBVwBdwAd0AWyAKXwCUw20F/paCu4Aq4Am6AO2AXGACWgQWgD3hHjI5dheK9Gt2AL+AD+AA+gQ/gA/gAPoAP4AP4hGAGkivgCrgC7oA7oCIcgCvgCqI/3AVH4BA4Aq6AK+AKuAJ+5ABcAVfAFXAFXIGoV4Ir4Aq4Aq6AK+AKuAKugCvgCkRngSvgCrgCroAr4Aq4Aq6AK+AKuAJR35pM3gmFDzNQfCkCU8AkMAxsAfXADv4+9gF0A3VAB/4+dgO1QDuuA1SBa7x2YyAPuXAaKJ1IMTAPnKVIZ4EsPo7nFfxDd8MFcBF+o03FLeD9kXMOuKvwjUIp+io2hb95L1L8VHk5qk6jR7w3XDn4m+UCp8A00EILWwKuha96tR0Je+AZOKcQrOK9qRGKwb2Aac4Rng22ixQHgEltvN//n2AcGAb6aGkrwGv4ypmA3/fL0cJoCBo19uvHf96XhSYh6ecBX8N4qwJ4p56GpgHvJNOcIjwLzMbdYpxmPABP1wQB+hjvA1OwNn5UDjVw7PiZkSRJkiRJkiRJkiRJkiRJkiRJ0m/5AjBIK4L1lH7fAAAAAElFTkSuQmCC" | base64 -d > assets/GPS.png
         fi
         # Create placeholder presplash if missing
         if [ ! -f data/presplash.png ]; then
           echo "Creating placeholder presplash..."
-          echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" | base64 -d > data/presplash.png
+          convert -size 320x480 xc:navy data/presplash.png 2>/dev/null || \
+          echo "iVBORw0KGgoAAAANSUhEUgAAAUAAAADwCAYAAABxLb1rAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEwAACxMBAJqcGAAAAeBJREFUeJzt07FtwkAURdET6QnUQhVpKqAdpBN3QFsk1GYlAibCicCKIuTzPJI9sn3SXj7nXHUt7H98/l+0p1t7q6sl3W//9VUAAAAAAAAAAAAAAADo1w1wB3wCL8AFMAM0NAK8AE/AtJZyv9+AN2CUKjHpRrsG1tsVcAfcZYps3qKv1SthYiwRwERMR0qUKjFVsIcpUfIu8Eo/TBdYp3ABbN3BFk4UfwWcgGJnxMyO0iNFoE4bT1g/lsOEsGMR8P+FX8BrpuxB8UwExrvC00QnC6DlSrBtIb4DftM/1zgZANvcdE6PXYsAjj1BjIyaCYCV1Y8wq+sBnxKBIy4JhwVwrG4R8BKpDYB15DZe3YOAJXqDQWvaw2/60RovMx9lBYpdq9k8+7ZtgA9ggUO95cAqRY9jr8dTz4uO8/bahx6HTK2cC7x3R5piDRcBz9V8tdr/nz1u6L/N9tg6sPugzRW1Qj/ebBUd+6vnl2xU+Sr9d/siBQAAAAAAAAAAAAAA6Jfvh8UAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADo1wd8Jp8O7FqwSgAAAABJRU5ErkJggg==" | base64 -d > data/presplash.png
         fi
+    
+    - name: Fix buildozer.spec for Android
+      run: |
+        # Update icon to PNG format for Android
+        sed -i 's/icon.filename = assets\/GPS.ico/icon.filename = assets\/GPS.png/' buildozer.spec
+        
+        # Ensure proper Android API levels
+        sed -i 's/android.api = 30/android.api = 33/' buildozer.spec
+        sed -i 's/android.minapi = 21/android.minapi = 23/' buildozer.spec
     
     - name: Build APK with verbose logging
       run: |
+        echo "🚀 Starting build..."
         buildozer android debug --verbose 2>&1 | tee build.log
-        # Check if build succeeded
-        if [ $? -ne 0 ]; then
+        BUILD_EXIT=${PIPESTATUS[0]}
+        if [ $BUILD_EXIT -ne 0 ]; then
           echo "❌ Build failed! Last 100 lines of log:"
           tail -n 100 build.log
           exit 1
         fi
+        echo "✅ Build completed successfully!"
+        echo ""
+        echo "📁 Searching for APK files..."
+        find . -name "*.apk" -type f 2>/dev/null | while read apk; do
+          echo "Found: $apk ($(du -h "$apk" | cut -f1))"
+        done
+        echo ""
+        echo "📁 Listing bin directory contents:"
+        ls -la bin/ 2>/dev/null || echo "bin directory empty or missing"
+        echo ""
+        echo "📁 Listing buildozer dist directory:"
+        find .buildozer -name "*.apk" -type f 2>/dev/null | head -5
     
     - name: Upload APK
       if: success()
       uses: actions/upload-artifact@v4
       with:
         name: mzindatrack-apk
-        path: bin/*.apk
+        path: |
+          bin/*.apk
+          .buildozer/android/platform/build/dists/*/build/outputs/apk/debug/*.apk
+          .buildozer/bin/*.apk
         retention-days: 30
+        if-no-files-found: warn
+    
+    - name: Debug build output (if upload fails)
+      if: failure()
+      run: |
+        echo "🔍 Debugging: Looking for APK files..."
+        find . -type f -name "*.apk" 2>/dev/null || echo "No APK files found anywhere"
+        echo ""
+        echo "📂 Directory structure of .buildozer:"
+        ls -la .buildozer/ 2>/dev/null || echo ".buildozer not found"
+        echo ""
+        echo "📂 Directory structure of bin:"
+        ls -la bin/ 2>/dev/null || echo "bin not found"
