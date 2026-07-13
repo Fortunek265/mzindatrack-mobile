@@ -34,6 +34,22 @@ from kivy.storage.jsonstore import JsonStore
 from kivy.metrics import dp
 from kivy.properties import StringProperty, BooleanProperty, NumericProperty
 
+# WebView support with fallback
+try:
+    # Try to import from kivy-garden
+    from kivy_garden.xwebview import XWebView
+    WEBVIEW_AVAILABLE = True
+    print("✅ WebView loaded from kivy-garden.xwebview")
+except ImportError:
+    try:
+        # Fallback to built-in WebView if available (Android only)
+        from kivy.uix.webview import WebView
+        WEBVIEW_AVAILABLE = True
+        print("✅ WebView loaded from kivy.uix.webview")
+    except ImportError:
+        WEBVIEW_AVAILABLE = False
+        print("⚠️ WebView not available - using browser fallback")
+
 # For Android permissions
 if platform == 'android':
     from android.permissions import request_permissions, Permission
@@ -122,15 +138,16 @@ class CustomPopup(Popup):
         self.auto_dismiss = True
         self.separator_height = dp(1)
 
-# ==================== WEB VIEW - PLACEHOLDER ====================
+# ==================== WEB VIEW ====================
 class MobileWebView(BoxLayout):
-    """Web view for mobile (simplified - uses WebView on Android)"""
+    """Web view for mobile - supports Android WebView with fallback"""
     
     def __init__(self, app, **kwargs):
         super().__init__(**kwargs)
         self.app = app
         self.orientation = 'vertical'
         self.spacing = 0
+        self.webview = None
         
         # Toolbar
         self.toolbar = BoxLayout(
@@ -177,6 +194,7 @@ class MobileWebView(BoxLayout):
             background_color=(0.1, 0.1, 0.15, 1),
             foreground_color=(0.88, 0.9, 0.93, 1)
         )
+        self.url_bar.bind(on_text_validate=self.on_url_enter)
         
         # Home button
         self.home_btn = Button(
@@ -220,57 +238,83 @@ class MobileWebView(BoxLayout):
         )
         self.web_container.add_widget(self.placeholder)
         
-        # WebView will be added when on Android
-        if platform == 'android':
-            try:
-                from kivy.uix.webview import WebView
-                self.webview = WebView()
-                self.webview.size_hint = (1, 1)
-                # We'll replace placeholder with webview when needed
-            except ImportError:
-                pass
-        
         self.add_widget(self.web_container)
         self.current_url = ""
         self.home_url = ""
     
+    def on_url_enter(self, instance):
+        """Handle URL enter key"""
+        url = self.url_bar.text.strip()
+        if url:
+            self.load_url(url)
+    
     def load_url(self, url):
+        """Load a URL in the webview"""
         if not url.startswith('http://') and not url.startswith('https://'):
             url = 'http://' + url
+        
         self.current_url = url
         self.url_bar.text = url
         
-        if platform == 'android':
+        # Try to use WebView if available
+        if WEBVIEW_AVAILABLE and platform == 'android':
             try:
-                from kivy.uix.webview import WebView
-                if hasattr(self, 'webview'):
-                    self.web_container.clear_widgets()
-                    self.web_container.add_widget(self.webview)
+                self.web_container.clear_widgets()
+                
+                # Create WebView based on what's available
+                if 'XWebView' in globals():
+                    self.webview = XWebView(url=url)
+                elif 'WebView' in globals():
+                    self.webview = WebView()
                     self.webview.load(url)
-                    return
-            except:
-                pass
+                else:
+                    raise ImportError("No WebView available")
+                
+                self.web_container.add_widget(self.webview)
+                print(f"✅ WebView loaded: {url}")
+                return
+            except Exception as e:
+                print(f"⚠️ WebView error: {e}")
+                # Fall through to browser fallback
         
         # Fallback: open in browser
+        print(f"🌐 Opening in browser: {url}")
         webbrowser.open(url)
+        
+        # Show notification in placeholder
+        self.web_container.clear_widgets()
+        fallback_label = Label(
+            text=f"🌐 Opened in browser\n\n{url}\n\nTap 'Open' button to re-open",
+            halign='center',
+            valign='middle',
+            color=(0.4, 0.45, 0.5, 1)
+        )
+        self.web_container.add_widget(fallback_label)
     
     def set_home_url(self, url):
+        """Set the home URL"""
         self.home_url = url
     
     def go_home(self, instance=None):
+        """Navigate to home URL"""
         if self.home_url:
             self.load_url(self.home_url)
     
     def go_back(self, instance=None):
-        if platform == 'android' and hasattr(self, 'webview'):
+        """Go back in webview history"""
+        if self.webview and hasattr(self.webview, 'go_back'):
             try:
                 self.webview.go_back()
                 return
             except:
                 pass
+        # Fallback: reload home
+        if self.home_url:
+            self.load_url(self.home_url)
     
     def go_forward(self, instance=None):
-        if platform == 'android' and hasattr(self, 'webview'):
+        """Go forward in webview history"""
+        if self.webview and hasattr(self.webview, 'go_forward'):
             try:
                 self.webview.go_forward()
                 return
@@ -278,7 +322,8 @@ class MobileWebView(BoxLayout):
                 pass
     
     def refresh(self, instance=None):
-        if platform == 'android' and hasattr(self, 'webview'):
+        """Refresh the webview"""
+        if self.webview and hasattr(self.webview, 'reload'):
             try:
                 self.webview.reload()
                 return
@@ -289,6 +334,7 @@ class MobileWebView(BoxLayout):
             webbrowser.open(self.current_url)
     
     def open_in_browser(self, instance=None):
+        """Open current URL in external browser"""
         if self.current_url:
             webbrowser.open(self.current_url)
 
