@@ -59,20 +59,19 @@ jobs:
         # Remove hardcoded NDK path
         sed -i '/android.ndk_path =/c\# android.ndk_path =' buildozer.spec
         
-        # Use NDK 23c for develop
+        # Use NDK 23c
         sed -i 's/android.ndk = 25c/android.ndk = 23c/g' buildozer.spec
         sed -i 's/android.ndk = 28c/android.ndk = 23c/g' buildozer.spec
         
-        # Use develop branch (supports Python 3.9)
-        sed -i 's/p4a.branch = master/p4a.branch = develop/g' buildozer.spec
-        sed -i 's/p4a.branch = release-2022.7.0/p4a.branch = develop/g' buildozer.spec
-        sed -i 's/p4a.branch = release-2023.3.0/p4a.branch = develop/g' buildozer.spec
+        # Use specific p4a commit that supports Python 3.9 and AAB
+        sed -i 's/p4a.branch = master/p4a.branch = 29b2028/g' buildozer.spec
+        sed -i 's/p4a.branch = develop/p4a.branch = 29b2028/g' buildozer.spec
+        sed -i 's/p4a.branch = release-2022.7.0/p4a.branch = 29b2028/g' buildozer.spec
+        sed -i 's/p4a.branch = release-2023.3.0/p4a.branch = 29b2028/g' buildozer.spec
         
-        # Remove kivy-garden.xwebview (not available via pip)
+        # Remove kivy-garden.xwebview if present
         sed -i 's/kivy-garden.xwebview//g' buildozer.spec
-        # Clean up extra commas
         sed -i 's/,,/,/g' buildozer.spec
-        sed -i 's/, ,/,/g' buildozer.spec
         
         # Change android.arch to android.archs
         sed -i 's/android.arch =/android.archs =/g' buildozer.spec
@@ -87,8 +86,8 @@ jobs:
         echo ""
         echo "✅ Updated buildozer.spec with fixes:"
         echo "   - NDK: 23c"
-        echo "   - p4a.branch: develop (Python 3.9 support)"
-        echo "   - Removed: kivy-garden.xwebview (not available)"
+        echo "   - p4a.branch: 29b2028 (specific commit with AAB + Python 3.9)"
+        echo "   - Removed: kivy-garden.xwebview"
         echo "   - android.archs: arm64-v8a"
         echo "   - Removed: android.sdk"
         echo ""
@@ -102,7 +101,7 @@ jobs:
         echo "🚀 Starting build process..."
         echo "Using Android SDK: $ANDROID_HOME"
         echo "Using NDK: 23c"
-        echo "Using p4a: develop"
+        echo "Using p4a: 29b2028"
         echo "Using Python: 3.9"
         echo ""
         echo "⚠️ Note: AAB warning is expected - APK will still build"
@@ -155,7 +154,7 @@ jobs:
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Configuration:" >> $GITHUB_STEP_SUMMARY
         echo "- NDK: 23c" >> $GITHUB_STEP_SUMMARY
-        echo "- P4A: develop" >> $GITHUB_STEP_SUMMARY
+        echo "- P4A: 29b2028" >> $GITHUB_STEP_SUMMARY
         echo "- Python: 3.9" >> $GITHUB_STEP_SUMMARY
         echo "- Architecture: arm64-v8a" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
