@@ -30,8 +30,8 @@ source.exclude_dirs = tests, bin, __pycache__, .git, .github, .buildozer
 # (str) Application versioning
 version = 1.0.0
 
-# (list) Application requirements - Force both hostpython3 and python3
-requirements = hostpython3==3.10.20,python3==3.10,kivy==2.2.1,requests,plyer,pyjnius,android
+# (list) Application requirements - Force both to exactly 3.10.20
+requirements = hostpython3==3.10.20,python3==3.10.20,kivy==2.2.1,requests,plyer,pyjnius,android
 
 # (str) Presplash of the application
 presplash.filename = data/presplash.png
