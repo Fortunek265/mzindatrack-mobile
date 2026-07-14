@@ -30,11 +30,9 @@ jobs:
         mkdir -p assets data
         
         # Generate a simple 1x1 transparent PNG using base64
-        # This is a valid 1x1 transparent PNG
         echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==" | base64 -d > assets/icon.png
         
         # Same for presplash (copy the same image or create a slightly larger one)
-        # Create a 256x256 black PNG for presplash
         echo "iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAOxAAADsQBlSsOGwAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAA9SURBVHic7cEBDQAAAMKg909tDwcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8Gx8QwABqSkbYAAAAABJRU5ErkJggg==" | base64 -d > data/presplash.png
         
         echo "✅ Created placeholder images"
@@ -74,9 +72,9 @@ jobs:
         # Remove hardcoded NDK path
         sed -i '/android.ndk_path =/c\# android.ndk_path =' buildozer.spec
         
-        # Use NDK 23c (works with master, avoids clang error)
-        sed -i 's/android.ndk = 25c/android.ndk = 23c/g' buildozer.spec
-        sed -i 's/android.ndk = 28c/android.ndk = 23c/g' buildozer.spec
+        # Use NDK 28c (recommended for master)
+        sed -i 's/android.ndk = 23c/android.ndk = 28c/g' buildozer.spec
+        sed -i 's/android.ndk = 25c/android.ndk = 28c/g' buildozer.spec
         
         # Use master branch
         sed -i 's/p4a.branch = develop/p4a.branch = master/g' buildozer.spec
@@ -108,7 +106,7 @@ jobs:
         
         echo ""
         echo "✅ Updated buildozer.spec with fixes:"
-        echo "   - NDK: 23c (avoids clang error)"
+        echo "   - NDK: 28c (recommended for master)"
         echo "   - p4a.branch: master"
         echo "   - hostpython3: 3.10.20"
         echo "   - python3: 3.10.20 (exact match)"
@@ -126,7 +124,7 @@ jobs:
       run: |
         echo "🚀 Starting build process..."
         echo "Using Android SDK: $ANDROID_HOME"
-        echo "Using NDK: 23c"
+        echo "Using NDK: 28c"
         echo "Using p4a: master"
         echo "Using Python: 3.10.20"
         
@@ -188,7 +186,7 @@ jobs:
         echo "## Build Status: ${{ steps.build.outcome }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Configuration:" >> $GITHUB_STEP_SUMMARY
-        echo "- NDK: 23c" >> $GITHUB_STEP_SUMMARY
+        echo "- NDK: 28c" >> $GITHUB_STEP_SUMMARY
         echo "- P4A: master" >> $GITHUB_STEP_SUMMARY
         echo "- hostpython3: 3.10.20" >> $GITHUB_STEP_SUMMARY
         echo "- python3: 3.10.20" >> $GITHUB_STEP_SUMMARY
