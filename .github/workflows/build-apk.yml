@@ -35,7 +35,6 @@ jobs:
         source.dir = .
         source.include_exts = py,png,jpg,kv,atlas,ico,json
         version = 1.0.0
-        # Fixed requirements - using versions that exist
         requirements = python3==3.9,kivy==2.2.0,requests,plyer==2.1
         
         orientation = portrait
@@ -45,7 +44,8 @@ jobs:
         android.api = 33
         android.minapi = 21
         android.sdk = 33
-        android.ndk = 23c
+        # FIXED: Use NDK 25c instead of 23c
+        android.ndk = 25c
         android.ndk_api = 21
         android.accept_sdk_license = True
         android.apptheme = @style/Theme.AppCompat
@@ -62,7 +62,7 @@ jobs:
         bin_dir = ./bin
         EOF
         
-        echo "🚀 Starting build..."
+        echo "🚀 Starting build with NDK 25c..."
         echo "y" | buildozer -v android debug
         
         # Check if APK was created
