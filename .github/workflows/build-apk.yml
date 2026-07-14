@@ -63,23 +63,20 @@ jobs:
         sed -i 's/android.ndk = 23c/android.ndk = 25c/g' buildozer.spec
         sed -i 's/android.ndk = 28c/android.ndk = 25c/g' buildozer.spec
         
-        # Use develop branch (supports Python 3.9)
-        sed -i 's/p4a.branch = master/p4a.branch = develop/g' buildozer.spec
-        sed -i 's/p4a.branch = 2024.5.1/p4a.branch = develop/g' buildozer.spec
-        sed -i 's/p4a.branch = 2023.10.0/p4a.branch = develop/g' buildozer.spec
-        sed -i 's/p4a.branch = 2023.9.0/p4a.branch = develop/g' buildozer.spec
+        # Use master branch (has AAB support)
+        sed -i 's/p4a.branch = develop/p4a.branch = master/g' buildozer.spec
         
-        # Use exact Python version
-        sed -i 's/python3==3.9/python3==3.9.5/g' buildozer.spec
+        # Use hostpython3 to force Python 3.9.5
+        sed -i 's/requirements = python3==3.9.5,kivy==2.1.0,requests,plyer,pyjnius,android/requirements = hostpython3==3.9.5,python3==3.9.5,kivy==2.1.0,requests,plyer,pyjnius,android/g' buildozer.spec
+        
+        # Add kivy-garden.xwebview
+        sed -i 's/requirements = hostpython3==3.9.5,python3==3.9.5,kivy==2.1.0,requests,plyer,pyjnius,android/requirements = hostpython3==3.9.5,python3==3.9.5,kivy==2.1.0,requests,plyer,pyjnius,android,kivy-garden.xwebview/g' buildozer.spec
         
         # Change android.arch to android.archs
         sed -i 's/android.arch =/android.archs =/g' buildozer.spec
         
         # Remove deprecated android.sdk line
         sed -i '/android.sdk =/d' buildozer.spec
-        
-        # Add kivy-garden.xwebview
-        sed -i 's/requirements = python3==3.9.5,kivy==2.1.0,requests,plyer,pyjnius,android/requirements = python3==3.9.5,kivy==2.1.0,requests,plyer,pyjnius,android,kivy-garden.xwebview/g' buildozer.spec
         
         # Ensure Android API is set correctly
         sed -i 's/android.api = 33/android.api = 30/g' buildozer.spec
@@ -88,8 +85,9 @@ jobs:
         echo ""
         echo "✅ Updated buildozer.spec with fixes:"
         echo "   - NDK: 25c"
-        echo "   - p4a.branch: develop"
-        echo "   - Python: 3.9.5"
+        echo "   - p4a.branch: master (AAB support)"
+        echo "   - hostpython3: 3.9.5 (forces Python version)"
+        echo "   - python3: 3.9.5"
         echo "   - android.archs: arm64-v8a"
         echo "   - Removed: android.sdk"
         echo "   - Added: kivy-garden.xwebview"
@@ -104,7 +102,7 @@ jobs:
         echo "🚀 Starting build process..."
         echo "Using Android SDK: $ANDROID_HOME"
         echo "Using NDK: 25c"
-        echo "Using p4a: develop"
+        echo "Using p4a: master (with hostpython3 override)"
         echo "Using Python: 3.9.5"
         
         # Build with verbose logging
@@ -165,7 +163,7 @@ jobs:
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Configuration:" >> $GITHUB_STEP_SUMMARY
         echo "- NDK: 25c" >> $GITHUB_STEP_SUMMARY
-        echo "- P4A: develop" >> $GITHUB_STEP_SUMMARY
+        echo "- P4A: master (with hostpython3 override)" >> $GITHUB_STEP_SUMMARY
         echo "- Python: 3.9.5" >> $GITHUB_STEP_SUMMARY
         echo "- Architecture: arm64-v8a" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
