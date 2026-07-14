@@ -88,8 +88,9 @@ android.copy_libs = 1
 # (bool) Enable AndroidX support
 android.use_androidx = True
 
-# (str) Python-for-android branch - UPDATED to stable version that supports AAB and Python 3.9
-p4a.branch = 2024.5.1
+# (str) Python-for-android branch - Use stable release with AAB support
+# Options: 2023.10.0, 2023.9.0, or use 'master' with a workaround
+p4a.branch = 2023.10.0
 
 # (str) Bootstrap to use
 p4a.bootstrap = sdl2
