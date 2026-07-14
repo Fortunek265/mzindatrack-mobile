@@ -59,15 +59,19 @@ jobs:
         # Remove hardcoded NDK path
         sed -i '/android.ndk_path =/c\# android.ndk_path =' buildozer.spec
         
-        # UPDATE: Use NDK 25c (compatible with p4a 2023.9.0)
+        # UPDATE: Use NDK 25c (compatible with p4a master)
         sed -i 's/android.ndk = 23c/android.ndk = 25c/g' buildozer.spec
         sed -i 's/android.ndk = 28c/android.ndk = 25c/g' buildozer.spec
         
-        # UPDATE: Use stable p4a version 2023.9.0
-        sed -i 's/p4a.branch = develop/p4a.branch = 2023.9.0/g' buildozer.spec
-        sed -i 's/p4a.branch = master/p4a.branch = 2023.9.0/g' buildozer.spec
-        sed -i 's/p4a.branch = 2024.5.1/p4a.branch = 2023.9.0/g' buildozer.spec
-        sed -i 's/p4a.branch = 2023.10.0/p4a.branch = 2023.9.0/g' buildozer.spec
+        # UPDATE: Use p4a master branch
+        sed -i 's/p4a.branch = develop/p4a.branch = master/g' buildozer.spec
+        # Remove any invalid version tags
+        sed -i 's/p4a.branch = 2024.5.1/p4a.branch = master/g' buildozer.spec
+        sed -i 's/p4a.branch = 2023.10.0/p4a.branch = master/g' buildozer.spec
+        sed -i 's/p4a.branch = 2023.9.0/p4a.branch = master/g' buildozer.spec
+        
+        # UPDATE: Use exact Python 3.9.5 to avoid version mismatch
+        sed -i 's/python3==3.9/python3==3.9.5/g' buildozer.spec
         
         # UPDATE: Change android.arch to android.archs (plural)
         sed -i 's/android.arch =/android.archs =/g' buildozer.spec
@@ -76,7 +80,7 @@ jobs:
         sed -i '/android.sdk =/d' buildozer.spec
         
         # UPDATE: Add kivy-garden.xwebview for WebView support
-        sed -i 's/requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android/requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android,kivy-garden.xwebview/g' buildozer.spec
+        sed -i 's/requirements = python3==3.9.5,kivy==2.1.0,requests,plyer,pyjnius,android/requirements = python3==3.9.5,kivy==2.1.0,requests,plyer,pyjnius,android,kivy-garden.xwebview/g' buildozer.spec
         
         # Ensure Android API is set correctly
         sed -i 's/android.api = 33/android.api = 30/g' buildozer.spec
@@ -84,8 +88,9 @@ jobs:
         
         echo ""
         echo "✅ Updated buildozer.spec with fixes:"
-        echo "   - NDK: 25c (compatible with p4a 2023.9.0)"
-        echo "   - p4a.branch: 2023.9.0 (stable release)"
+        echo "   - NDK: 25c"
+        echo "   - p4a.branch: master"
+        echo "   - Python: 3.9.5 (exact version)"
         echo "   - android.archs: arm64-v8a"
         echo "   - Removed: android.sdk"
         echo "   - Added: kivy-garden.xwebview"
@@ -100,7 +105,8 @@ jobs:
         echo "🚀 Starting build process..."
         echo "Using Android SDK: $ANDROID_HOME"
         echo "Using NDK: 25c"
-        echo "Using p4a: 2023.9.0"
+        echo "Using p4a: master"
+        echo "Using Python: 3.9.5"
         
         # Build with verbose logging
         buildozer -v android debug 2>&1 | tee build.log
@@ -161,8 +167,8 @@ jobs:
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Configuration:" >> $GITHUB_STEP_SUMMARY
         echo "- NDK: 25c" >> $GITHUB_STEP_SUMMARY
-        echo "- P4A: 2023.9.0" >> $GITHUB_STEP_SUMMARY
-        echo "- Python: 3.9" >> $GITHUB_STEP_SUMMARY
+        echo "- P4A: master" >> $GITHUB_STEP_SUMMARY
+        echo "- Python: 3.9.5" >> $GITHUB_STEP_SUMMARY
         echo "- Architecture: arm64-v8a" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### APK Status: ${{ steps.build.outputs.apk_exists == 'true' && '✅ Available' || '❌ Not found' }}" >> $GITHUB_STEP_SUMMARY
