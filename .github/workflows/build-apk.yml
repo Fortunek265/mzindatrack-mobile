@@ -62,10 +62,10 @@ jobs:
         # UPDATE: Use NDK 28c (minimum required by p4a)
         sed -i 's/android.ndk = 23c/android.ndk = 28c/g' buildozer.spec
         
-        # UPDATE: Use stable p4a version that supports AAB and Python 3.9
-        sed -i 's/p4a.branch = develop/p4a.branch = 2024.5.1/g' buildozer.spec
-        # Also handle if it was already changed to master
-        sed -i 's/p4a.branch = master/p4a.branch = 2024.5.1/g' buildozer.spec
+        # UPDATE: Use stable p4a version 2023.10.0
+        sed -i 's/p4a.branch = develop/p4a.branch = 2023.10.0/g' buildozer.spec
+        sed -i 's/p4a.branch = master/p4a.branch = 2023.10.0/g' buildozer.spec
+        sed -i 's/p4a.branch = 2024.5.1/p4a.branch = 2023.10.0/g' buildozer.spec
         
         # UPDATE: Change android.arch to android.archs (plural)
         sed -i 's/android.arch =/android.archs =/g' buildozer.spec
@@ -82,10 +82,10 @@ jobs:
         
         echo ""
         echo "✅ Updated buildozer.spec with fixes:"
-        echo "   - NDK: 28c (minimum required)"
-        echo "   - p4a.branch: 2024.5.1 (stable, supports Python 3.9 & AAB)"
-        echo "   - android.archs: arm64-v8a (plural)"
-        echo "   - Removed: android.sdk (deprecated)"
+        echo "   - NDK: 28c"
+        echo "   - p4a.branch: 2023.10.0"
+        echo "   - android.archs: arm64-v8a"
+        echo "   - Removed: android.sdk"
         echo "   - Added: kivy-garden.xwebview"
         echo ""
         echo "📄 Final buildozer.spec:"
@@ -98,7 +98,7 @@ jobs:
         echo "🚀 Starting build process..."
         echo "Using Android SDK: $ANDROID_HOME"
         echo "Using NDK: 28c (will be downloaded by buildozer)"
-        echo "Using p4a: 2024.5.1"
+        echo "Using p4a: 2023.10.0"
         
         # Build with verbose logging
         buildozer -v android debug 2>&1 | tee build.log
@@ -156,6 +156,12 @@ jobs:
         echo "# Build Summary" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "## Build Status: ${{ steps.build.outcome }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Configuration:" >> $GITHUB_STEP_SUMMARY
+        echo "- NDK: 28c" >> $GITHUB_STEP_SUMMARY
+        echo "- P4A: 2023.10.0" >> $GITHUB_STEP_SUMMARY
+        echo "- Python: 3.9" >> $GITHUB_STEP_SUMMARY
+        echo "- Architecture: arm64-v8a" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### APK Status: ${{ steps.build.outputs.apk_exists == 'true' && '✅ Available' || '❌ Not found' }}" >> $GITHUB_STEP_SUMMARY
         if [ "${{ steps.build.outputs.apk_exists }}" == "true" ]; then
