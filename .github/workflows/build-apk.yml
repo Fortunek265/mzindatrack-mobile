@@ -26,21 +26,15 @@ jobs:
     
     - name: Create placeholder icon and presplash
       run: |
-        # Create assets and data directories if they don't exist
         mkdir -p assets data
-        
-        # Generate a simple 1x1 transparent PNG using base64
         echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==" | base64 -d > assets/icon.png
-        
-        # Same for presplash (copy the same image or create a slightly larger one)
         echo "iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAOxAAADsQBlSsOGwAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAA9SURBVHic7cEBDQAAAMKg909tDwcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8Gx8QwABqSkbYAAAAABJRU5ErkJggg==" | base64 -d > data/presplash.png
-        
         echo "✅ Created placeholder images"
     
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: '3.9'   # Match app Python version
     
     - name: Install system dependencies
       run: |
@@ -54,8 +48,6 @@ jobs:
           python3-pip python3-dev \
           android-sdk \
           android-sdk-platform-tools
-        
-        # Set up Android SDK environment
         echo "ANDROIDSDK=/usr/lib/android-sdk" >> $GITHUB_ENV
         echo "ANDROID_HOME=/usr/lib/android-sdk" >> $GITHUB_ENV
     
@@ -68,54 +60,35 @@ jobs:
     - name: Configure buildozer.spec
       run: |
         echo "🔧 Updating buildozer.spec..."
-        
         # Remove hardcoded NDK path
         sed -i '/android.ndk_path =/c\# android.ndk_path =' buildozer.spec
-        
-        # Use NDK 28c (recommended for master)
-        sed -i 's/android.ndk = 23c/android.ndk = 28c/g' buildozer.spec
-        sed -i 's/android.ndk = 25c/android.ndk = 28c/g' buildozer.spec
-        
-        # Use master branch
-        sed -i 's/p4a.branch = develop/p4a.branch = master/g' buildozer.spec
-        sed -i 's/p4a.branch = release-2022.7.0/p4a.branch = master/g' buildozer.spec
-        sed -i 's/p4a.branch = 29b2028/p4a.branch = master/g' buildozer.spec
-        
-        # Force both hostpython3 and python3 to exactly 3.10.20
-        sed -i 's/requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android/requirements = hostpython3==3.10.20,python3==3.10.20,kivy==2.2.1,requests,plyer,pyjnius,android/g' buildozer.spec
-        sed -i 's/requirements = python3==3.10,kivy==2.2.1,requests,plyer,pyjnius,android/requirements = hostpython3==3.10.20,python3==3.10.20,kivy==2.2.1,requests,plyer,pyjnius,android/g' buildozer.spec
-        sed -i 's/requirements = hostpython3==3.10.20,python3==3.10,kivy==2.2.1,requests,plyer,pyjnius,android/requirements = hostpython3==3.10.20,python3==3.10.20,kivy==2.2.1,requests,plyer,pyjnius,android/g' buildozer.spec
-        
-        # Remove kivy-garden.xwebview if present
+        # Ensure NDK 23c
+        sed -i 's/android.ndk = 25c/android.ndk = 23c/g' buildozer.spec
+        sed -i 's/android.ndk = 28c/android.ndk = 23c/g' buildozer.spec
+        # Use develop branch
+        sed -i 's/p4a.branch = master/p4a.branch = develop/g' buildozer.spec
+        # Ensure Python 3.9 and Kivy 2.1.0
+        sed -i 's/requirements = python3==3.10.*/requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android/g' buildozer.spec
+        sed -i 's/requirements = hostpython3.*/requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android/g' buildozer.spec
+        # Remove kivy-garden.xwebview
         sed -i 's/kivy-garden.xwebview//g' buildozer.spec
         sed -i 's/,,/,/g' buildozer.spec
-        sed -i 's/, ,/,/g' buildozer.spec
-        
-        # Change android.arch to android.archs
+        # Use android.archs
         sed -i 's/android.arch =/android.archs =/g' buildozer.spec
-        
-        # Remove deprecated android.sdk line
+        # Remove deprecated tokens
         sed -i '/android.sdk =/d' buildozer.spec
-        
-        # Remove android.features line (not supported)
         sed -i '/android.features =/d' buildozer.spec
-        
-        # Ensure Android API is set correctly
+        # Ensure API levels
         sed -i 's/android.api = 33/android.api = 30/g' buildozer.spec
         sed -i 's/android.minapi = 21/android.minapi = 21/g' buildozer.spec
-        
         echo ""
-        echo "✅ Updated buildozer.spec with fixes:"
-        echo "   - NDK: 28c (recommended for master)"
-        echo "   - p4a.branch: master"
-        echo "   - hostpython3: 3.10.20"
-        echo "   - python3: 3.10.20 (exact match)"
-        echo "   - Kivy: 2.2.1"
-        echo "   - Removed: kivy-garden.xwebview, android.features"
-        echo "   - android.archs: arm64-v8a"
-        echo "   - Removed: android.sdk"
+        echo "✅ Updated buildozer.spec:"
+        echo "   - NDK: 23c"
+        echo "   - p4a.branch: develop"
+        echo "   - Python: 3.9"
+        echo "   - Kivy: 2.1.0"
+        echo "   - Removed kivy-garden.xwebview, android.features, android.sdk"
         echo ""
-        echo "📄 Final buildozer.spec:"
         cat buildozer.spec
     
     - name: Build APK
@@ -123,49 +96,24 @@ jobs:
       continue-on-error: true
       run: |
         echo "🚀 Starting build process..."
-        echo "Using Android SDK: $ANDROID_HOME"
-        echo "Using NDK: 28c"
-        echo "Using p4a: master"
-        echo "Using Python: 3.10.20"
-        
-        # Build with verbose logging
         buildozer -v android debug 2>&1 | tee build.log
-        
-        echo ""
-        echo "📁 Checking for APK..."
         if ls bin/*.apk 2>/dev/null; then
           echo "✅ APK found!"
           echo "apk_exists=true" >> $GITHUB_OUTPUT
-          echo "📦 APK files:"
           ls -la bin/*.apk
-          
-          # Check for AAB (should be generated with master)
-          if ls bin/*.aab 2>/dev/null; then
-            echo "📦 AAB files found!"
-            echo "aab_exists=true" >> $GITHUB_OUTPUT
-            ls -la bin/*.aab
-          else
-            echo "aab_exists=false" >> $GITHUB_OUTPUT
-          fi
         else
           echo "❌ No APK found"
           echo "apk_exists=false" >> $GITHUB_OUTPUT
-          echo ""
-          echo "📄 Last 300 lines of build log:"
           tail -n 300 build.log
         fi
     
-    - name: Upload APK/AAB artifacts
+    - name: Upload APK
       if: steps.build.outputs.apk_exists == 'true'
       uses: actions/upload-artifact@v4
       with:
-        name: mzindatrack-build
-        path: |
-          bin/*.apk
-          bin/*.aab
-          bin/*.apks
+        name: mzindatrack-apk
+        path: bin/*.apk
         retention-days: 30
-        compression-level: 0
     
     - name: Upload build logs
       if: always()
@@ -182,29 +130,5 @@ jobs:
       if: always()
       run: |
         echo "# Build Summary" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
         echo "## Build Status: ${{ steps.build.outcome }}" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Configuration:" >> $GITHUB_STEP_SUMMARY
-        echo "- NDK: 28c" >> $GITHUB_STEP_SUMMARY
-        echo "- P4A: master" >> $GITHUB_STEP_SUMMARY
-        echo "- hostpython3: 3.10.20" >> $GITHUB_STEP_SUMMARY
-        echo "- python3: 3.10.20" >> $GITHUB_STEP_SUMMARY
-        echo "- Kivy: 2.2.1" >> $GITHUB_STEP_SUMMARY
-        echo "- Architecture: arm64-v8a" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
         echo "### APK Status: ${{ steps.build.outputs.apk_exists == 'true' && '✅ Available' || '❌ Not found' }}" >> $GITHUB_STEP_SUMMARY
-        if [ "${{ steps.build.outputs.apk_exists }}" == "true" ]; then
-          echo "📦 APK files:" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          ls -la bin/*.apk 2>/dev/null || echo "No APK files" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-        fi
-        if [ "${{ steps.build.outputs.aab_exists }}" == "true" ]; then
-          echo "📦 AAB files:" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          ls -la bin/*.aab 2>/dev/null || echo "No AAB files" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-        fi
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "🔗 Download artifacts from the Artifacts section below." >> $GITHUB_STEP_SUMMARY
