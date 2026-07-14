@@ -79,8 +79,8 @@ android.apptheme = "@style/Theme.AppCompat"
 # (list) The Android archs to build for
 android.archs = arm64-v8a
 
-# (list) Android features to enable
-android.features = android.hardware.location.gps
+# (list) Android features to enable - REMOVED (not supported)
+# android.features = android.hardware.location.gps
 
 # (bool) Copy library instead of making a libpymodules.so
 android.copy_libs = 1
