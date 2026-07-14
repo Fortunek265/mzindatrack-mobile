@@ -30,7 +30,7 @@ source.exclude_dirs = tests, bin, __pycache__, .git, .github, .buildozer
 # (str) Application versioning
 version = 1.0.0
 
-# (list) Application requirements - Use hostpython3 to override version
+# (list) Application requirements
 requirements = hostpython3==3.9.5,python3==3.9.5,kivy==2.1.0,requests,plyer,pyjnius,android,kivy-garden.xwebview
 
 # (str) Presplash of the application
@@ -58,8 +58,8 @@ android.api = 30
 # (int) Minimum API your APK will support
 android.minapi = 21
 
-# (str) Android NDK version - Use 25c for master branch
-android.ndk = 25c
+# (str) Android NDK version - Use 23c for compatibility
+android.ndk = 23c
 
 # (int) Android NDK API
 android.ndk_api = 21
@@ -88,8 +88,9 @@ android.copy_libs = 1
 # (bool) Enable AndroidX support
 android.use_androidx = True
 
-# (str) Python-for-android branch - Use master for AAB support
-p4a.branch = master
+# (str) Python-for-android branch - Use a specific commit that works
+# This commit is from before the pip --dry-run issue
+p4a.branch = a60d850
 
 # (str) Bootstrap to use
 p4a.bootstrap = sdl2
