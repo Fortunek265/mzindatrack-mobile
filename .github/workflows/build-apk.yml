@@ -13,58 +13,122 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Build APK
+    - name: Setup Buildozer directories
       run: |
-        # Create buildozer directory with proper permissions
         mkdir -p ~/.buildozer
+        mkdir -p ~/.buildozer/logs
+        chmod -R 777 ~/.buildozer
+    
+    - name: Create local buildozer config
+      run: |
+        # Create .buildozer config to disable root check
+        cat > ~/.buildozer/default.spec << 'EOF'
+        [app]
+        # Root ignore for CI
+        android.accept_sdk_license = True
         
+        [buildozer]
+        log_level = 2
+        warn_on_root = 0
+        EOF
+        
+        # Also create in project directory
+        echo "ignore_root = 1" > .buildozer-ignore-root
+    
+    - name: Build APK with Docker
+      run: |
         docker run --rm \
           -v $(pwd):/home/user/hostapp \
           -v ~/.buildozer:/home/user/.buildozer \
           -e BUILDOZER_IGNORE_ROOT=1 \
+          -e BUILD_SDKVERSION=33 \
+          -e BUILD_NDK=23c \
           -e USER=root \
+          --entrypoint /bin/bash \
           kivy/buildozer:latest \
-          bash -c "
+          -c "
             cd /home/user/hostapp
             
-            # Override the root check by creating a custom buildozer.spec
-            # that has the necessary configurations
+            # Show current directory contents
+            echo '📁 Current directory contents:'
+            ls -la
             
-            # Add WebView dependency to spec (use AndroidX version)
+            # Show buildozer.spec contents
+            echo '📄 buildozer.spec contents:'
+            cat buildozer.spec | head -50
+            
+            # Fix WebView dependency - use AndroidX WebKit
+            sed -i '/android.gradle_dependencies/d' buildozer.spec
             echo 'android.gradle_dependencies = androidx.webkit:webkit:1.8.0' >> buildozer.spec
             
-            # Force build by using --force flag and piping 'yes' to avoid prompts
-            echo 'y' | buildozer -v android debug
+            # Ensure proper requirements
+            sed -i 's/requirements = .*/requirements = python3==3.9.5,kivy==2.1.0,requests,plyer,kivy-garden.xwebview/' buildozer.spec
+            
+            # Create a response file to handle prompts
+            echo 'y' > /tmp/response.txt
+            
+            # Build the APK
+            echo '🔨 Starting build process...'
+            
+            # Try with force flag and non-interactive mode
+            buildozer -v --force android debug < /tmp/response.txt || {
+              echo '❌ Build failed with force flag, trying alternative approach...'
+              
+              # Alternative: Use yes command to pipe 'y' to all prompts
+              yes y | buildozer -v android debug
+            }
+            
+            # Check build result
+            if [ -f bin/*.apk ]; then
+              echo '✅ APK built successfully!'
+              ls -lh bin/*.apk
+            else
+              echo '❌ No APK found. Checking logs...'
+              find /home/user/.buildozer -name '*.log' -exec tail -n 100 {} \;
+              exit 1
+            fi
           "
     
-    - name: Verify APK
-      if: always()
+    - name: Verify APK exists
       run: |
-        echo "Checking for APK files..."
-        if [ -f "bin/*.apk" ]; then
-          ls -la bin/*.apk
-          echo "✅ APK found!"
+        echo "🔍 Checking for APK files..."
+        if ls bin/*.apk 2>/dev/null; then
+          APK_SIZE=$(du -h bin/*.apk | cut -f1)
+          echo "✅ APK found! Size: $APK_SIZE"
+          echo "APK_PATH=bin/*.apk" >> $GITHUB_ENV
         else
-          echo "❌ No APK found"
-          # Show logs
-          find ~/.buildozer -name "*.log" -exec tail -n 50 {} \;
+          echo "❌ No APK found in bin directory"
+          echo "Directory contents:"
+          ls -la bin/ 2>/dev/null || echo "bin directory doesn't exist"
+          echo "Build logs:"
+          find ~/.buildozer -name "*.log" -exec cat {} \;
+          exit 1
         fi
     
     - name: Upload APK
       if: success()
       uses: actions/upload-artifact@v4
       with:
-        name: mzindatrack-apk
+        name: mzindatrack-app
         path: bin/*.apk
         retention-days: 30
+        compression-level: 0
     
     - name: Upload build logs
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: build-logs
+        name: buildozer-logs
         path: |
           ~/.buildozer/logs/*.log
           ~/.buildozer/.buildozer.log
-          bin/*.apk
+          ~/.buildozer/venv/venv_*.log
+        retention-days: 7
+    
+    - name: Upload buildozer.spec
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: buildozer-spec
+        path: buildozer.spec
         retention-days: 7
