@@ -58,8 +58,8 @@ android.api = 30
 # (int) Minimum API your APK will support
 android.minapi = 21
 
-# (str) Android NDK version - Use 23c (works with master)
-android.ndk = 23c
+# (str) Android NDK version - Use 28c (recommended for master)
+android.ndk = 28c
 
 # (int) Android NDK API
 android.ndk_api = 21
