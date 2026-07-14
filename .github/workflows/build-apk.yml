@@ -14,31 +14,41 @@ jobs:
       uses: actions/checkout@v4
     
     - name: Build APK
-      env:
-        BUILDOZER_IGNORE_ROOT: "1"
       run: |
+        # Create buildozer directory with proper permissions
+        mkdir -p ~/.buildozer
+        
         docker run --rm \
-          -e BUILDOZER_IGNORE_ROOT=1 \
           -v $(pwd):/home/user/hostapp \
           -v ~/.buildozer:/home/user/.buildozer \
+          -e BUILDOZER_IGNORE_ROOT=1 \
+          -e USER=root \
           kivy/buildozer:latest \
           bash -c "
             cd /home/user/hostapp
             
-            # Modify spec to include WebView gradle dependencies
-            echo 'android.gradle_dependencies = com.android.support:webview:latest' >> buildozer.spec
+            # Override the root check by creating a custom buildozer.spec
+            # that has the necessary configurations
             
-            # Build with verbose output
-            buildozer -v android debug
+            # Add WebView dependency to spec (use AndroidX version)
+            echo 'android.gradle_dependencies = androidx.webkit:webkit:1.8.0' >> buildozer.spec
             
-            # Check if APK was created
-            if ls -la bin/*.apk 2>/dev/null; then
-              echo '✅ APK built successfully!'
-            else
-              echo '❌ No APK found - check logs'
-              tail -n 100 /home/user/.buildozer/logs/*.log
-            fi
+            # Force build by using --force flag and piping 'yes' to avoid prompts
+            echo 'y' | buildozer -v android debug
           "
+    
+    - name: Verify APK
+      if: always()
+      run: |
+        echo "Checking for APK files..."
+        if [ -f "bin/*.apk" ]; then
+          ls -la bin/*.apk
+          echo "✅ APK found!"
+        else
+          echo "❌ No APK found"
+          # Show logs
+          find ~/.buildozer -name "*.log" -exec tail -n 50 {} \;
+        fi
     
     - name: Upload APK
       if: success()
@@ -55,4 +65,6 @@ jobs:
         name: build-logs
         path: |
           ~/.buildozer/logs/*.log
+          ~/.buildozer/.buildozer.log
+          bin/*.apk
         retention-days: 7
