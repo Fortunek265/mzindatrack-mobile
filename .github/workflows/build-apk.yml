@@ -54,29 +54,39 @@ jobs:
     
     - name: Configure buildozer.spec
       run: |
+        echo "🔧 Updating buildozer.spec..."
+        
         # Remove hardcoded NDK path
         sed -i '/android.ndk_path =/c\# android.ndk_path =' buildozer.spec
         
-        # Use stable NDK
-        sed -i 's/android.ndk = 23c/android.ndk = 23c/g' buildozer.spec
+        # UPDATE: Use NDK 28c (minimum required by p4a master)
+        sed -i 's/android.ndk = 23c/android.ndk = 28c/g' buildozer.spec
         
-        # Update requirements - keep webview support
-        sed -i 's/requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android/requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android,kivy-garden.xwebview/g' buildozer.spec
+        # UPDATE: Use p4a master branch for AAB support
+        sed -i 's/p4a.branch = develop/p4a.branch = master/g' buildozer.spec
         
-        # Fix: Change android.arch to android.archs
+        # UPDATE: Change android.arch to android.archs (plural)
         sed -i 's/android.arch =/android.archs =/g' buildozer.spec
         
-        # Fix: Remove deprecated android.sdk line
+        # UPDATE: Remove deprecated android.sdk line
         sed -i '/android.sdk =/d' buildozer.spec
         
-        # Fix: Update p4a.branch to master for AAB support
-        sed -i 's/p4a.branch = develop/p4a.branch = master/g' buildozer.spec
+        # UPDATE: Add kivy-garden.xwebview for WebView support
+        sed -i 's/requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android/requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android,kivy-garden.xwebview/g' buildozer.spec
         
         # Ensure Android API is set correctly
         sed -i 's/android.api = 33/android.api = 30/g' buildozer.spec
         sed -i 's/android.minapi = 21/android.minapi = 21/g' buildozer.spec
         
-        echo "✅ Updated buildozer.spec:"
+        echo ""
+        echo "✅ Updated buildozer.spec with fixes:"
+        echo "   - NDK: 28c (minimum required)"
+        echo "   - p4a.branch: master (AAB support)"
+        echo "   - android.archs: arm64-v8a (plural)"
+        echo "   - Removed: android.sdk (deprecated)"
+        echo "   - Added: kivy-garden.xwebview"
+        echo ""
+        echo "📄 Final buildozer.spec:"
         cat buildozer.spec
     
     - name: Build APK
@@ -85,34 +95,46 @@ jobs:
       run: |
         echo "🚀 Starting build process..."
         echo "Using Android SDK: $ANDROID_HOME"
+        echo "Using NDK: 28c (will be downloaded by buildozer)"
         
         # Build with verbose logging
         buildozer -v android debug 2>&1 | tee build.log
         
+        echo ""
         echo "📁 Checking for APK..."
         if ls bin/*.apk 2>/dev/null; then
           echo "✅ APK found!"
           echo "apk_exists=true" >> $GITHUB_OUTPUT
           echo "📦 APK files:"
           ls -la bin/*.apk
+          
+          # Also check for AAB if generated
+          if ls bin/*.aab 2>/dev/null; then
+            echo "📦 AAB files found:"
+            ls -la bin/*.aab
+            echo "aab_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "aab_exists=false" >> $GITHUB_OUTPUT
+          fi
         else
           echo "❌ No APK found"
           echo "apk_exists=false" >> $GITHUB_OUTPUT
           echo ""
-          echo "📄 Last 200 lines of build log:"
-          tail -n 200 build.log
+          echo "📄 Last 300 lines of build log:"
+          tail -n 300 build.log
         fi
     
-    - name: Upload APK
+    - name: Upload APK/AAB artifacts
       if: steps.build.outputs.apk_exists == 'true'
       uses: actions/upload-artifact@v4
       with:
-        name: mzindatrack-apk
+        name: mzindatrack-build
         path: |
           bin/*.apk
           bin/*.aab
           bin/*.apks
         retention-days: 30
+        compression-level: 0
     
     - name: Upload build logs
       if: always()
@@ -124,3 +146,26 @@ jobs:
           .buildozer/logs/*.log
           ~/.buildozer/logs/*.log
         retention-days: 7
+    
+    - name: Build summary
+      if: always()
+      run: |
+        echo "# Build Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Build Status: ${{ steps.build.outcome }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### APK Status: ${{ steps.build.outputs.apk_exists == 'true' && '✅ Available' || '❌ Not found' }}" >> $GITHUB_STEP_SUMMARY
+        if [ "${{ steps.build.outputs.apk_exists }}" == "true" ]; then
+          echo "📦 APK files:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          ls -la bin/*.apk 2>/dev/null || echo "No APK files" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+        fi
+        if [ "${{ steps.build.outputs.aab_exists }}" == "true" ]; then
+          echo "📦 AAB files:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          ls -la bin/*.aab 2>/dev/null || echo "No AAB files" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+        fi
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "🔗 Download artifacts from the Artifacts section below." >> $GITHUB_STEP_SUMMARY
