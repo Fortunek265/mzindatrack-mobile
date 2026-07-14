@@ -59,15 +59,19 @@ jobs:
         # Remove hardcoded NDK path
         sed -i '/android.ndk_path =/c\# android.ndk_path =' buildozer.spec
         
-        # Use NDK 23c
-        sed -i 's/android.ndk = 25c/android.ndk = 23c/g' buildozer.spec
-        sed -i 's/android.ndk = 28c/android.ndk = 23c/g' buildozer.spec
+        # Use NDK 25c for master
+        sed -i 's/android.ndk = 23c/android.ndk = 25c/g' buildozer.spec
         
-        # Use release-2022.7.0 (stable, exists)
-        sed -i 's/p4a.branch = master/p4a.branch = release-2022.7.0/g' buildozer.spec
-        sed -i 's/p4a.branch = develop/p4a.branch = release-2022.7.0/g' buildozer.spec
-        sed -i 's/p4a.branch = release-2023.3.0/p4a.branch = release-2022.7.0/g' buildozer.spec
-        sed -i 's/p4a.branch = a60d850/p4a.branch = release-2022.7.0/g' buildozer.spec
+        # Use master branch (has AAB support)
+        sed -i 's/p4a.branch = develop/p4a.branch = master/g' buildozer.spec
+        sed -i 's/p4a.branch = release-2022.7.0/p4a.branch = master/g' buildozer.spec
+        sed -i 's/p4a.branch = release-2023.3.0/p4a.branch = master/g' buildozer.spec
+        
+        # Use hostpython3 to force Python 3.9.5
+        sed -i 's/requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android/requirements = hostpython3==3.9.5,python3==3.9.5,kivy==2.1.0,requests,plyer,pyjnius,android/g' buildozer.spec
+        
+        # Add kivy-garden.xwebview
+        sed -i 's/requirements = hostpython3==3.9.5,python3==3.9.5,kivy==2.1.0,requests,plyer,pyjnius,android/requirements = hostpython3==3.9.5,python3==3.9.5,kivy==2.1.0,requests,plyer,pyjnius,android,kivy-garden.xwebview/g' buildozer.spec
         
         # Change android.arch to android.archs
         sed -i 's/android.arch =/android.archs =/g' buildozer.spec
@@ -75,17 +79,16 @@ jobs:
         # Remove deprecated android.sdk line
         sed -i '/android.sdk =/d' buildozer.spec
         
-        # Add kivy-garden.xwebview
-        sed -i 's/requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android/requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android,kivy-garden.xwebview/g' buildozer.spec
-        
         # Ensure Android API is set correctly
         sed -i 's/android.api = 33/android.api = 30/g' buildozer.spec
         sed -i 's/android.minapi = 21/android.minapi = 21/g' buildozer.spec
         
         echo ""
         echo "✅ Updated buildozer.spec with fixes:"
-        echo "   - NDK: 23c"
-        echo "   - p4a.branch: release-2022.7.0 (stable, exists)"
+        echo "   - NDK: 25c"
+        echo "   - p4a.branch: master (has AAB support)"
+        echo "   - hostpython3: 3.9.5"
+        echo "   - python3: 3.9.5"
         echo "   - android.archs: arm64-v8a"
         echo "   - Removed: android.sdk"
         echo "   - Added: kivy-garden.xwebview"
@@ -99,9 +102,9 @@ jobs:
       run: |
         echo "🚀 Starting build process..."
         echo "Using Android SDK: $ANDROID_HOME"
-        echo "Using NDK: 23c"
-        echo "Using p4a: release-2022.7.0"
-        echo "Using Python: 3.9"
+        echo "Using NDK: 25c"
+        echo "Using p4a: master (with hostpython3 override)"
+        echo "Using Python: 3.9.5"
         
         # Build with verbose logging
         buildozer -v android debug 2>&1 | tee build.log
@@ -160,9 +163,9 @@ jobs:
         echo "## Build Status: ${{ steps.build.outcome }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Configuration:" >> $GITHUB_STEP_SUMMARY
-        echo "- NDK: 23c" >> $GITHUB_STEP_SUMMARY
-        echo "- P4A: release-2022.7.0" >> $GITHUB_STEP_SUMMARY
-        echo "- Python: 3.9" >> $GITHUB_STEP_SUMMARY
+        echo "- NDK: 25c" >> $GITHUB_STEP_SUMMARY
+        echo "- P4A: master (with hostpython3 override)" >> $GITHUB_STEP_SUMMARY
+        echo "- Python: 3.9.5" >> $GITHUB_STEP_SUMMARY
         echo "- Architecture: arm64-v8a" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### APK Status: ${{ steps.build.outputs.apk_exists == 'true' && '✅ Available' || '❌ Not found' }}" >> $GITHUB_STEP_SUMMARY
