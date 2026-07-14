@@ -1,7 +1,7 @@
 [app]
 
-# (str) Force NDK path (for CI/CD)
-android.ndk_path = /home/runner/.buildozer/android/platform/android-ndk-r23c
+# (str) Force NDK path - REMOVED for CI/CD
+# android.ndk_path = 
 
 # (str) Title of your application
 title = MzindaTrack
@@ -30,8 +30,8 @@ source.exclude_dirs = tests, bin, __pycache__, .git, .github, .buildozer
 # (str) Application versioning
 version = 1.0.0
 
-# (list) Application requirements - ADDED kivy-garden.xwebview
-requirements = python3==3.9.5,kivy==2.1.0,requests,plyer,kivy-garden.xwebview
+# (list) Application requirements - REMOVED kivy-garden.xwebview
+requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android
 
 # (str) Presplash of the application
 presplash.filename = data/presplash.png
@@ -52,22 +52,22 @@ fullscreen = 0
 # (list) Permissions
 android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION
 
-# (int) Target Android API
-android.api = 33
+# (int) Target Android API - Lowered for compatibility
+android.api = 30
 
 # (int) Minimum API your APK will support
 android.minapi = 21
 
 # (int) Android SDK version
-android.sdk = 33
+android.sdk = 30
 
-# (str) Android NDK version - Changed to stable 23c
+# (str) Android NDK version
 android.ndk = 23c
 
-# (int) Android NDK API - Changed to match minapi
+# (int) Android NDK API
 android.ndk_api = 21
 
-# (bool) Skip updating SDK/NDK to use system versions - Changed to False
+# (bool) Skip updating SDK/NDK to use system versions
 android.skip_update = False
 
 # (bool) Accept SDK license
