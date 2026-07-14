@@ -58,11 +58,8 @@ android.api = 30
 # (int) Minimum API your APK will support
 android.minapi = 21
 
-# (int) Android SDK version - REMOVED (deprecated)
-# android.sdk = 30
-
-# (str) Android NDK version
-android.ndk = 23c
+# (str) Android NDK version - UPDATED to 28c (minimum required by p4a)
+android.ndk = 28c
 
 # (int) Android NDK API
 android.ndk_api = 21
@@ -79,7 +76,7 @@ android.entrypoint = org.kivy.android.PythonActivity
 # (str) Android app theme
 android.apptheme = "@style/Theme.AppCompat"
 
-# (list) The Android archs to build for - Updated from android.arch to android.archs
+# (list) The Android archs to build for
 android.archs = arm64-v8a
 
 # (list) Android features to enable
@@ -91,7 +88,7 @@ android.copy_libs = 1
 # (bool) Enable AndroidX support
 android.use_androidx = True
 
-# (str) Python-for-android branch - Updated to master for AAB support
+# (str) Python-for-android branch - Using master for AAB support
 p4a.branch = master
 
 # (str) Bootstrap to use
