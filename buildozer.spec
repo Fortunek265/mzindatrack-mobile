@@ -76,7 +76,7 @@ android.entrypoint = org.kivy.android.PythonActivity
 # (str) Android app theme
 android.apptheme = "@style/Theme.AppCompat"
 
-# (list) The Android archs to build for
+# (list) The Android archs to build for - UPDATED from android.arch to android.archs
 android.archs = arm64-v8a
 
 # (list) Android features to enable
@@ -88,8 +88,8 @@ android.copy_libs = 1
 # (bool) Enable AndroidX support
 android.use_androidx = True
 
-# (str) Python-for-android branch - Using master for AAB support
-p4a.branch = master
+# (str) Python-for-android branch - UPDATED to stable version that supports AAB and Python 3.9
+p4a.branch = 2024.5.1
 
 # (str) Bootstrap to use
 p4a.bootstrap = sdl2
