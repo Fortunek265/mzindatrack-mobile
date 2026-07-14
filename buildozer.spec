@@ -31,7 +31,7 @@ source.exclude_dirs = tests, bin, __pycache__, .git, .github, .buildozer
 version = 1.0.0
 
 # (list) Application requirements
-requirements = hostpython3==3.9.5,python3==3.9.5,kivy==2.1.0,requests,plyer,pyjnius,android,kivy-garden.xwebview
+requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android,kivy-garden.xwebview
 
 # (str) Presplash of the application
 presplash.filename = data/presplash.png
@@ -88,9 +88,8 @@ android.copy_libs = 1
 # (bool) Enable AndroidX support
 android.use_androidx = True
 
-# (str) Python-for-android branch - Use a specific commit that works
-# This commit is from before the pip --dry-run issue
-p4a.branch = a60d850
+# (str) Python-for-android branch - Use stable release that exists
+p4a.branch = release-2022.7.0
 
 # (str) Bootstrap to use
 p4a.bootstrap = sdl2
