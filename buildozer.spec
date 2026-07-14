@@ -9,8 +9,8 @@ source.exclude_exts = spec,md,yml,yaml
 source.exclude_dirs = tests, bin, __pycache__, .git, .github, .buildozer
 version = 1.0.0
 
-# Python 3.10 with Kivy 2.2.1 (compatible with p4a master)
-requirements = python3==3.10,kivy==2.2.1,requests,plyer,pyjnius,android
+# Pin both hostpython3 and python3 to 3.10.20 to match the host
+requirements = hostpython3==3.10.20,python3==3.10.20,kivy==2.2.1,requests,plyer,pyjnius,android
 
 presplash.filename = data/presplash.png
 icon.filename = assets/icon.png
@@ -19,8 +19,6 @@ fullscreen = 0
 android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION
 android.api = 30
 android.minapi = 21
-
-# NDK 28c is recommended by p4a master and should avoid the clang error
 android.ndk = 28c
 android.ndk_api = 21
 android.skip_update = False
@@ -30,8 +28,6 @@ android.apptheme = "@style/Theme.AppCompat"
 android.archs = arm64-v8a
 android.copy_libs = 1
 android.use_androidx = True
-
-# Use p4a master (has AAB support, works with Python 3.10)
 p4a.branch = master
 p4a.bootstrap = sdl2
 
