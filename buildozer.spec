@@ -30,8 +30,8 @@ source.exclude_dirs = tests, bin, __pycache__, .git, .github, .buildozer
 # (str) Application versioning
 version = 1.0.0
 
-# (list) Application requirements - REMOVED kivy-garden.xwebview
-requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android
+# (list) Application requirements - Added kivy-garden.xwebview for WebView support
+requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android,kivy-garden.xwebview
 
 # (str) Presplash of the application
 presplash.filename = data/presplash.png
@@ -52,14 +52,14 @@ fullscreen = 0
 # (list) Permissions
 android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION
 
-# (int) Target Android API - Lowered for compatibility
+# (int) Target Android API
 android.api = 30
 
 # (int) Minimum API your APK will support
 android.minapi = 21
 
-# (int) Android SDK version
-android.sdk = 30
+# (int) Android SDK version - REMOVED (deprecated)
+# android.sdk = 30
 
 # (str) Android NDK version
 android.ndk = 23c
@@ -79,8 +79,8 @@ android.entrypoint = org.kivy.android.PythonActivity
 # (str) Android app theme
 android.apptheme = "@style/Theme.AppCompat"
 
-# (str) The Android arch to build for - Just one arch for faster build
-android.arch = arm64-v8a
+# (list) The Android archs to build for - Updated from android.arch to android.archs
+android.archs = arm64-v8a
 
 # (list) Android features to enable
 android.features = android.hardware.location.gps
@@ -91,8 +91,8 @@ android.copy_libs = 1
 # (bool) Enable AndroidX support
 android.use_androidx = True
 
-# (str) Python-for-android branch
-p4a.branch = develop
+# (str) Python-for-android branch - Updated to master for AAB support
+p4a.branch = master
 
 # (str) Bootstrap to use
 p4a.bootstrap = sdl2
