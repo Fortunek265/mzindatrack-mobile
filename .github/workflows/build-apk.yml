@@ -1,4 +1,4 @@
-name: Build MzindaTrack APK (Non-Docker)
+name: Build MzindaTrack APK
 
 on:
   push:
@@ -13,51 +13,102 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
+    - name: List repository files (debug)
+      run: |
+        echo "📁 Repository root files:"
+        ls -la
+        echo ""
+        echo "📁 Assets folder (if exists):"
+        ls -la assets/ || echo "assets/ folder not found"
+        echo ""
+        echo "📁 Data folder (if exists):"
+        ls -la data/ || echo "data/ folder not found"
+    
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.9'
     
-    - name: Install dependencies
+    - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev cmake libffi-dev libssl-dev
+        sudo apt-get install -y \
+          git zip unzip \
+          openjdk-17-jdk \
+          autoconf libtool pkg-config \
+          zlib1g-dev libncurses5-dev libncursesw5-dev \
+          cmake libffi-dev libssl-dev \
+          python3-pip python3-dev \
+          android-sdk \
+          android-sdk-platform-tools
+        
+        # Set up Android SDK environment
+        echo "ANDROIDSDK=/usr/lib/android-sdk" >> $GITHUB_ENV
+        echo "ANDROID_HOME=/usr/lib/android-sdk" >> $GITHUB_ENV
+    
+    - name: Install Python dependencies
+      run: |
+        pip install --upgrade pip
         pip install buildozer cython
+        buildozer --version
+    
+    - name: Configure buildozer.spec
+      run: |
+        # Remove hardcoded NDK path
+        sed -i '/android.ndk_path =/c\# android.ndk_path =' buildozer.spec
+        
+        # Use stable NDK
+        sed -i 's/android.ndk = 23c/android.ndk = 23c/g' buildozer.spec
+        
+        # Update requirements - remove problematic webview
+        sed -i 's/requirements = python3==3.9.5,kivy==2.1.0,requests,plyer,kivy-garden.xwebview/requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android/g' buildozer.spec
+        
+        # Ensure Android API is set correctly
+        sed -i 's/android.api = 33/android.api = 30/g' buildozer.spec
+        sed -i 's/android.minapi = 21/android.minapi = 21/g' buildozer.spec
+        
+        echo "✅ Updated buildozer.spec:"
+        cat buildozer.spec
     
     - name: Build APK
+      id: build
+      continue-on-error: true
       run: |
-        # Use existing buildozer.spec but update NDK
-        if [ -f buildozer.spec ]; then
-          sed -i 's/android.ndk = 23c/android.ndk = 25c/g' buildozer.spec
-          echo "✅ Updated NDK to 25c"
-        else
-          echo "❌ No buildozer.spec found"
-          exit 1
-        fi
+        echo "🚀 Starting build process..."
+        echo "Using Android SDK: $ANDROID_HOME"
         
-        echo "📄 Buildozer.spec:"
-        cat buildozer.spec
-        
-        echo "🚀 Starting build..."
-        echo "y" | buildozer -v android debug 2>&1 | tee build.log
+        # Build with verbose logging
+        buildozer -v android debug 2>&1 | tee build.log
         
         echo "📁 Checking for APK..."
-        ls -la bin/ || echo "No APK found"
+        if ls bin/*.apk 2>/dev/null; then
+          echo "✅ APK found!"
+          echo "apk_exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "❌ No APK found"
+          echo "apk_exists=false" >> $GITHUB_OUTPUT
+          echo ""
+          echo "📄 Last 200 lines of build log:"
+          tail -n 200 build.log
+        fi
     
     - name: Upload APK
-      if: success()
+      if: steps.build.outputs.apk_exists == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: mzindatrack-apk
-        path: bin/*.apk
+        path: |
+          bin/*.apk
+          bin/*.aab
         retention-days: 30
     
-    - name: Upload logs
+    - name: Upload build logs
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: build-logs
         path: |
           build.log
+          .buildozer/logs/*.log
           ~/.buildozer/logs/*.log
         retention-days: 7
