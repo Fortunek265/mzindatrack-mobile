@@ -1,4 +1,4 @@
-name: Build MzindaTrack APK (Ubuntu 22.04)
+name: Build MzindaTrack APK (Docker Final)
 
 on:
   push:
@@ -7,67 +7,36 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-    
-    - name: Install dependencies
+    - name: Build with Docker
+      env:
+        BUILDOZER_IGNORE_ROOT: "1"
       run: |
-        sudo apt-get update
-        sudo apt-get install -y git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
-        pip install --upgrade pip
-        pip install buildozer cython
-    
-    - name: Build APK
-      run: |
-        cat > buildozer.spec << 'EOF'
-        [app]
-        title = MzindaTrack
-        package.name = mzindatrack
-        package.domain = org.mzindatrack
-        source.dir = .
-        source.include_exts = py,png,jpg,kv,atlas,ico,json
-        version = 1.0.0
-        requirements = python3==3.9,kivy==2.2.0,requests,plyer==2.1
-        
-        orientation = portrait
-        fullscreen = 0
-        
-        android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION
-        android.api = 33
-        android.minapi = 21
-        android.sdk = 33
-        # FIXED: Use NDK 25c instead of 23c
-        android.ndk = 25c
-        android.ndk_api = 21
-        android.accept_sdk_license = True
-        android.apptheme = @style/Theme.AppCompat
-        android.arch = arm64-v8a
-        android.use_androidx = True
-        android.keep_sdk_tools = True
-        android.aab = False
-        p4a.branch = master
-        
-        [buildozer]
-        log_level = 2
-        warn_on_root = 1
-        build_dir = ./.buildozer
-        bin_dir = ./bin
-        EOF
-        
-        echo "🚀 Starting build with NDK 25c..."
-        echo "y" | buildozer -v android debug
-        
-        # Check if APK was created
-        echo "📁 Checking for APK..."
-        ls -la bin/ || echo "No APK found"
+        docker run --rm \
+          -e BUILDOZER_IGNORE_ROOT=1 \
+          -v $(pwd):/home/user/hostapp \
+          -v ~/.buildozer:/home/user/.buildozer \
+          kivy/buildozer:latest \
+          bash -c "
+            cd /home/user/hostapp
+            
+            # Use original buildozer.spec but change NDK
+            sed -i 's/android.ndk = 23c/android.ndk = 25c/g' buildozer.spec || true
+            
+            echo '=== Buildozer.spec ==='
+            cat buildozer.spec
+            
+            echo '=== Starting build ==='
+            buildozer -v android debug 2>&1 | tee /home/user/hostapp/build.log
+            
+            echo '=== Checking for APK ==='
+            find . -name '*.apk' -type f || echo 'No APK found'
+          "
     
     - name: Upload APK
       if: success()
@@ -83,6 +52,6 @@ jobs:
       with:
         name: build-logs
         path: |
+          build.log
           ~/.buildozer/logs/*.log
-          .buildozer.log
         retention-days: 7
