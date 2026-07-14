@@ -13,59 +13,44 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '11'
+    
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      with:
+        cmdline-tools-version: 9477386
+    
+    - name: Install buildozer
+      run: |
+        pip install buildozer cython
+        echo "✅ Buildozer installed"
+    
     - name: Create .buildozer-ignore-root
       run: |
         echo "ignore_root = 1" > .buildozer-ignore-root
-        echo "Created .buildozer-ignore-root"
     
-    - name: Fix buildozer.spec
+    - name: Build APK
       run: |
-        # Fix WebView dependency to use proper AndroidX version
+        # Fix buildozer.spec for local build
         sed -i '/android.gradle_dependencies/d' buildozer.spec
         echo 'android.gradle_dependencies = androidx.webkit:webkit:1.8.0' >> buildozer.spec
-        
-        # Add AndroidX support
         echo 'android.use_androidx = True' >> buildozer.spec
         
-        # Ensure SDK and NDK settings are correct for CI
-        sed -i 's|android.ndk_path = .*|android.ndk_path = /root/.buildozer/android/platform/android-ndk-r23c|' buildozer.spec
-        sed -i 's/android.api = .*/android.api = 33/' buildozer.spec
-        sed -i 's/android.minapi = .*/android.minapi = 21/' buildozer.spec
+        # Set correct paths
+        echo "android.sdk_path = $ANDROID_HOME" >> buildozer.spec
+        echo "android.ndk_path = $ANDROID_NDK_HOME" >> buildozer.spec
         
-        echo "buildozer.spec updated:"
-        cat buildozer.spec
-    
-    - name: Build APK with Docker
-      run: |
-        # Build with specific version of buildozer that's known to work
-        docker run --rm \
-          -v $(pwd):/home/user/hostapp \
-          -v ~/.buildozer:/home/user/.buildozer \
-          -e BUILDOZER_IGNORE_ROOT=1 \
-          -e ANDROIDSDK=/root/.buildozer/android/platform/android-sdk \
-          -e ANDROIDNDK=/root/.buildozer/android/platform/android-ndk-r23c \
-          -e ANDROIDAPI=33 \
-          -e ANDROIDMINAPI=21 \
-          kivy/buildozer:android-19 \
-          bash -c "
-            cd /home/user/hostapp
-            
-            echo '🔨 Starting build...'
-            echo '📁 Files in directory:'
-            ls -la
-            
-            # Use yes to auto-confirm prompts
-            yes y | buildozer -v android debug
-            
-            # Check if APK was created
-            if ls -la bin/*.apk 2>/dev/null; then
-              echo '✅ APK built successfully!'
-              ls -lh bin/*.apk
-            else
-              echo '❌ No APK found'
-              exit 1
-            fi
-          "
+        # Build
+        yes y | buildozer -v android debug
     
     - name: Upload APK
       if: success()
@@ -75,10 +60,12 @@ jobs:
         path: bin/*.apk
         retention-days: 30
     
-    - name: Upload build logs
+    - name: Upload logs
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: build-logs
-        path: ~/.buildozer/logs/*.log
+        path: |
+          ~/.buildozer/logs/*.log
+          .buildozer.log
         retention-days: 7
