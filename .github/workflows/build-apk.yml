@@ -59,19 +59,20 @@ jobs:
         # Remove hardcoded NDK path
         sed -i '/android.ndk_path =/c\# android.ndk_path =' buildozer.spec
         
-        # Use NDK 25c for master
-        sed -i 's/android.ndk = 23c/android.ndk = 25c/g' buildozer.spec
+        # Use NDK 23c for develop
+        sed -i 's/android.ndk = 25c/android.ndk = 23c/g' buildozer.spec
+        sed -i 's/android.ndk = 28c/android.ndk = 23c/g' buildozer.spec
         
-        # Use master branch (has AAB support)
-        sed -i 's/p4a.branch = develop/p4a.branch = master/g' buildozer.spec
-        sed -i 's/p4a.branch = release-2022.7.0/p4a.branch = master/g' buildozer.spec
-        sed -i 's/p4a.branch = release-2023.3.0/p4a.branch = master/g' buildozer.spec
+        # Use develop branch (supports Python 3.9)
+        sed -i 's/p4a.branch = master/p4a.branch = develop/g' buildozer.spec
+        sed -i 's/p4a.branch = release-2022.7.0/p4a.branch = develop/g' buildozer.spec
+        sed -i 's/p4a.branch = release-2023.3.0/p4a.branch = develop/g' buildozer.spec
         
-        # Use hostpython3 to force Python 3.9.5
-        sed -i 's/requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android/requirements = hostpython3==3.9.5,python3==3.9.5,kivy==2.1.0,requests,plyer,pyjnius,android/g' buildozer.spec
-        
-        # Add kivy-garden.xwebview
-        sed -i 's/requirements = hostpython3==3.9.5,python3==3.9.5,kivy==2.1.0,requests,plyer,pyjnius,android/requirements = hostpython3==3.9.5,python3==3.9.5,kivy==2.1.0,requests,plyer,pyjnius,android,kivy-garden.xwebview/g' buildozer.spec
+        # Remove kivy-garden.xwebview (not available via pip)
+        sed -i 's/kivy-garden.xwebview//g' buildozer.spec
+        # Clean up extra commas
+        sed -i 's/,,/,/g' buildozer.spec
+        sed -i 's/, ,/,/g' buildozer.spec
         
         # Change android.arch to android.archs
         sed -i 's/android.arch =/android.archs =/g' buildozer.spec
@@ -85,13 +86,11 @@ jobs:
         
         echo ""
         echo "✅ Updated buildozer.spec with fixes:"
-        echo "   - NDK: 25c"
-        echo "   - p4a.branch: master (has AAB support)"
-        echo "   - hostpython3: 3.9.5"
-        echo "   - python3: 3.9.5"
+        echo "   - NDK: 23c"
+        echo "   - p4a.branch: develop (Python 3.9 support)"
+        echo "   - Removed: kivy-garden.xwebview (not available)"
         echo "   - android.archs: arm64-v8a"
         echo "   - Removed: android.sdk"
-        echo "   - Added: kivy-garden.xwebview"
         echo ""
         echo "📄 Final buildozer.spec:"
         cat buildozer.spec
@@ -102,9 +101,11 @@ jobs:
       run: |
         echo "🚀 Starting build process..."
         echo "Using Android SDK: $ANDROID_HOME"
-        echo "Using NDK: 25c"
-        echo "Using p4a: master (with hostpython3 override)"
-        echo "Using Python: 3.9.5"
+        echo "Using NDK: 23c"
+        echo "Using p4a: develop"
+        echo "Using Python: 3.9"
+        echo ""
+        echo "⚠️ Note: AAB warning is expected - APK will still build"
         
         # Build with verbose logging
         buildozer -v android debug 2>&1 | tee build.log
@@ -116,14 +117,6 @@ jobs:
           echo "apk_exists=true" >> $GITHUB_OUTPUT
           echo "📦 APK files:"
           ls -la bin/*.apk
-          
-          if ls bin/*.aab 2>/dev/null; then
-            echo "📦 AAB files found:"
-            ls -la bin/*.aab
-            echo "aab_exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "aab_exists=false" >> $GITHUB_OUTPUT
-          fi
         else
           echo "❌ No APK found"
           echo "apk_exists=false" >> $GITHUB_OUTPUT
@@ -132,15 +125,13 @@ jobs:
           tail -n 300 build.log
         fi
     
-    - name: Upload APK/AAB artifacts
+    - name: Upload APK artifacts
       if: steps.build.outputs.apk_exists == 'true'
       uses: actions/upload-artifact@v4
       with:
-        name: mzindatrack-build
+        name: mzindatrack-apk
         path: |
           bin/*.apk
-          bin/*.aab
-          bin/*.apks
         retention-days: 30
         compression-level: 0
     
@@ -163,9 +154,9 @@ jobs:
         echo "## Build Status: ${{ steps.build.outcome }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Configuration:" >> $GITHUB_STEP_SUMMARY
-        echo "- NDK: 25c" >> $GITHUB_STEP_SUMMARY
-        echo "- P4A: master (with hostpython3 override)" >> $GITHUB_STEP_SUMMARY
-        echo "- Python: 3.9.5" >> $GITHUB_STEP_SUMMARY
+        echo "- NDK: 23c" >> $GITHUB_STEP_SUMMARY
+        echo "- P4A: develop" >> $GITHUB_STEP_SUMMARY
+        echo "- Python: 3.9" >> $GITHUB_STEP_SUMMARY
         echo "- Architecture: arm64-v8a" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### APK Status: ${{ steps.build.outputs.apk_exists == 'true' && '✅ Available' || '❌ Not found' }}" >> $GITHUB_STEP_SUMMARY
@@ -173,12 +164,6 @@ jobs:
           echo "📦 APK files:" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           ls -la bin/*.apk 2>/dev/null || echo "No APK files" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-        fi
-        if [ "${{ steps.build.outputs.aab_exists }}" == "true" ]; then
-          echo "📦 AAB files:" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          ls -la bin/*.aab 2>/dev/null || echo "No AAB files" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
         fi
         echo "" >> $GITHUB_STEP_SUMMARY
