@@ -34,7 +34,7 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'  # Must match the app's Python requirement
+        python-version: '3.10'
     
     - name: Install system dependencies
       run: |
@@ -51,7 +51,7 @@ jobs:
         echo "ANDROIDSDK=/usr/lib/android-sdk" >> $GITHUB_ENV
         echo "ANDROID_HOME=/usr/lib/android-sdk" >> $GITHUB_ENV
     
-    - name: Install buildozer (latest, supports AAB)
+    - name: Install buildozer (latest)
       run: |
         pip install --upgrade pip
         pip install buildozer cython
@@ -60,32 +60,30 @@ jobs:
     - name: Configure buildozer.spec
       run: |
         echo "🔧 Updating buildozer.spec..."
-        # Remove hardcoded NDK path
         sed -i '/android.ndk_path =/c\# android.ndk_path =' buildozer.spec
-        # Force NDK 28c
         sed -i 's/android.ndk = 23c/android.ndk = 28c/g' buildozer.spec
         sed -i 's/android.ndk = 25c/android.ndk = 28c/g' buildozer.spec
-        # Use master branch
         sed -i 's/p4a.branch = develop/p4a.branch = master/g' buildozer.spec
-        # Use Python 3.10 and Kivy 2.2.1
-        sed -i 's/requirements = python3==3.9.*/requirements = python3==3.10,kivy==2.2.1,requests,plyer,pyjnius,android/g' buildozer.spec
-        sed -i 's/requirements = hostpython3.*/requirements = python3==3.10,kivy==2.2.1,requests,plyer,pyjnius,android/g' buildozer.spec
-        # Remove kivy-garden.xwebview
+        
+        # Pin both hostpython3 and python3 to 3.10.20
+        sed -i 's/requirements = python3==3.10.*/requirements = hostpython3==3.10.20,python3==3.10.20,kivy==2.2.1,requests,plyer,pyjnius,android/g' buildozer.spec
+        sed -i 's/requirements = hostpython3.*/requirements = hostpython3==3.10.20,python3==3.10.20,kivy==2.2.1,requests,plyer,pyjnius,android/g' buildozer.spec
+        
+        # Remove any stray kivy-garden.xwebview
         sed -i 's/kivy-garden.xwebview//g' buildozer.spec
         sed -i 's/,,/,/g' buildozer.spec
-        # Use android.archs
         sed -i 's/android.arch =/android.archs =/g' buildozer.spec
-        # Remove deprecated tokens
         sed -i '/android.sdk =/d' buildozer.spec
         sed -i '/android.features =/d' buildozer.spec
-        # Ensure API levels
         sed -i 's/android.api = 33/android.api = 30/g' buildozer.spec
         sed -i 's/android.minapi = 21/android.minapi = 21/g' buildozer.spec
+        
         echo ""
         echo "✅ Updated buildozer.spec:"
         echo "   - NDK: 28c"
         echo "   - p4a.branch: master"
-        echo "   - Python: 3.10"
+        echo "   - hostpython3: 3.10.20"
+        echo "   - python3: 3.10.20"
         echo "   - Kivy: 2.2.1"
         echo "   - Removed kivy-garden.xwebview, android.features, android.sdk"
         echo ""
