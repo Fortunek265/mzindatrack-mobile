@@ -30,7 +30,7 @@ source.exclude_dirs = tests, bin, __pycache__, .git, .github, .buildozer
 # (str) Application versioning
 version = 1.0.0
 
-# (list) Application requirements - Use develop branch compatible versions
+# (list) Application requirements - Use Python 3.9
 requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android
 
 # (str) Presplash of the application
@@ -58,7 +58,7 @@ android.api = 30
 # (int) Minimum API your APK will support
 android.minapi = 21
 
-# (str) Android NDK version - Use 23c for develop branch
+# (str) Android NDK version - Use 23c
 android.ndk = 23c
 
 # (int) Android NDK API
@@ -88,8 +88,9 @@ android.copy_libs = 1
 # (bool) Enable AndroidX support
 android.use_androidx = True
 
-# (str) Python-for-android branch - Use develop (supports Python 3.9)
-p4a.branch = develop
+# (str) Python-for-android branch - Use a specific commit from master that supports Python 3.9
+# This commit is from before the Python 3.10 requirement was added
+p4a.branch = 29b2028
 
 # (str) Bootstrap to use
 p4a.bootstrap = sdl2
