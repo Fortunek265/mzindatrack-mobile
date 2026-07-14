@@ -34,7 +34,7 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'   # Must match the app's Python requirement
+        python-version: '3.9'
     
     - name: Install system dependencies
       run: |
@@ -51,52 +51,31 @@ jobs:
         echo "ANDROIDSDK=/usr/lib/android-sdk" >> $GITHUB_ENV
         echo "ANDROID_HOME=/usr/lib/android-sdk" >> $GITHUB_ENV
     
-    - name: Install buildozer 1.4.0 (does not require AAB support)
+    - name: Install buildozer 1.4.0
       run: |
         pip install --upgrade pip
         pip install buildozer==1.4.0 cython
+        echo "✅ Installed buildozer:"
         buildozer --version
-        # Verify version to ensure downgrade succeeded
-        BUILD_VERSION=$(buildozer --version | head -n1 | cut -d' ' -f2)
-        if [[ "$BUILD_VERSION" != "1.4.0" ]]; then
-          echo "❌ buildozer version is $BUILD_VERSION, expected 1.4.0"
-          exit 1
-        else
-          echo "✅ buildozer version is 1.4.0"
-        fi
     
     - name: Configure buildozer.spec
       run: |
         echo "🔧 Updating buildozer.spec..."
-        # Remove hardcoded NDK path
         sed -i '/android.ndk_path =/c\# android.ndk_path =' buildozer.spec
-        # Ensure NDK 23c
         sed -i 's/android.ndk = 25c/android.ndk = 23c/g' buildozer.spec
         sed -i 's/android.ndk = 28c/android.ndk = 23c/g' buildozer.spec
-        # Use develop branch
         sed -i 's/p4a.branch = master/p4a.branch = develop/g' buildozer.spec
-        # Ensure Python 3.9 and Kivy 2.1.0
         sed -i 's/requirements = python3==3.10.*/requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android/g' buildozer.spec
         sed -i 's/requirements = hostpython3.*/requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android/g' buildozer.spec
-        # Remove kivy-garden.xwebview
         sed -i 's/kivy-garden.xwebview//g' buildozer.spec
         sed -i 's/,,/,/g' buildozer.spec
-        # Use android.archs
         sed -i 's/android.arch =/android.archs =/g' buildozer.spec
-        # Remove deprecated tokens
         sed -i '/android.sdk =/d' buildozer.spec
         sed -i '/android.features =/d' buildozer.spec
-        # Ensure API levels
         sed -i 's/android.api = 33/android.api = 30/g' buildozer.spec
         sed -i 's/android.minapi = 21/android.minapi = 21/g' buildozer.spec
         echo ""
         echo "✅ Updated buildozer.spec:"
-        echo "   - NDK: 23c"
-        echo "   - p4a.branch: develop"
-        echo "   - Python: 3.9"
-        echo "   - Kivy: 2.1.0"
-        echo "   - Removed kivy-garden.xwebview, android.features, android.sdk"
-        echo ""
         cat buildozer.spec
     
     - name: Build APK
@@ -104,7 +83,6 @@ jobs:
       continue-on-error: true
       run: |
         echo "🚀 Starting build process with buildozer 1.4.0..."
-        # Force APK build (not AAB)
         buildozer -v android debug 2>&1 | tee build.log
         if ls bin/*.apk 2>/dev/null; then
           echo "✅ APK found!"
