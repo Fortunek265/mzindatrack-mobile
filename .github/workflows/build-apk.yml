@@ -63,8 +63,9 @@ jobs:
         sed -i '/android.ndk_path =/c\# android.ndk_path =' buildozer.spec
         sed -i 's/android.ndk = 25c/android.ndk = 23c/g' buildozer.spec
         sed -i 's/android.ndk = 28c/android.ndk = 23c/g' buildozer.spec
-        sed -i 's/p4a.branch = master/p4a.branch = release-2023.6.0/g' buildozer.spec
-        sed -i 's/p4a.branch = develop/p4a.branch = release-2023.6.0/g' buildozer.spec
+        sed -i 's/p4a.branch = master/p4a.branch = develop/g' buildozer.spec
+        sed -i 's/p4a.branch = release-2023.6.0/p4a.branch = develop/g' buildozer.spec
+        sed -i 's/p4a.branch = release-2023.7.0/p4a.branch = develop/g' buildozer.spec
         sed -i 's/requirements = python3==3.10.*/requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android/g' buildozer.spec
         sed -i 's/requirements = hostpython3.*/requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android/g' buildozer.spec
         sed -i 's/kivy-garden.xwebview//g' buildozer.spec
@@ -77,7 +78,7 @@ jobs:
         echo ""
         echo "✅ Updated buildozer.spec:"
         echo "   - NDK: 23c"
-        echo "   - p4a.branch: release-2023.6.0"
+        echo "   - p4a.branch: develop"
         echo "   - Python: 3.9"
         echo "   - Kivy: 2.1.0"
         echo "   - Removed kivy-garden.xwebview, android.features, android.sdk"
@@ -88,7 +89,7 @@ jobs:
       id: build
       continue-on-error: true
       run: |
-        echo "🚀 Starting build process with buildozer 1.4.0 and p4a release-2023.6.0..."
+        echo "🚀 Starting build process with buildozer 1.4.0 and p4a develop..."
         buildozer -v android debug 2>&1 | tee build.log
         if ls bin/*.apk 2>/dev/null; then
           echo "✅ APK found!"
