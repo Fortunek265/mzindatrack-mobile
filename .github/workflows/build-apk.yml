@@ -13,25 +13,58 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Build APK
+    - name: Create .buildozer-ignore-root
       run: |
-        # Create config to disable root warning
         echo "ignore_root = 1" > .buildozer-ignore-root
+        echo "Created .buildozer-ignore-root"
+    
+    - name: Fix buildozer.spec
+      run: |
+        # Fix WebView dependency to use proper AndroidX version
+        sed -i '/android.gradle_dependencies/d' buildozer.spec
+        echo 'android.gradle_dependencies = androidx.webkit:webkit:1.8.0' >> buildozer.spec
         
-        # Build with yes command to auto-confirm prompts
+        # Add AndroidX support
+        echo 'android.use_androidx = True' >> buildozer.spec
+        
+        # Ensure SDK and NDK settings are correct for CI
+        sed -i 's|android.ndk_path = .*|android.ndk_path = /root/.buildozer/android/platform/android-ndk-r23c|' buildozer.spec
+        sed -i 's/android.api = .*/android.api = 33/' buildozer.spec
+        sed -i 's/android.minapi = .*/android.minapi = 21/' buildozer.spec
+        
+        echo "buildozer.spec updated:"
+        cat buildozer.spec
+    
+    - name: Build APK with Docker
+      run: |
+        # Build with specific version of buildozer that's known to work
         docker run --rm \
           -v $(pwd):/home/user/hostapp \
           -v ~/.buildozer:/home/user/.buildozer \
           -e BUILDOZER_IGNORE_ROOT=1 \
-          kivy/buildozer:latest \
+          -e ANDROIDSDK=/root/.buildozer/android/platform/android-sdk \
+          -e ANDROIDNDK=/root/.buildozer/android/platform/android-ndk-r23c \
+          -e ANDROIDAPI=33 \
+          -e ANDROIDMINAPI=21 \
+          kivy/buildozer:android-19 \
           bash -c "
             cd /home/user/hostapp
             
-            # Fix WebView dependency
-            echo 'android.gradle_dependencies = androidx.webkit:webkit:1.8.0' >> buildozer.spec
+            echo '🔨 Starting build...'
+            echo '📁 Files in directory:'
+            ls -la
             
-            # Build with yes pipe
+            # Use yes to auto-confirm prompts
             yes y | buildozer -v android debug
+            
+            # Check if APK was created
+            if ls -la bin/*.apk 2>/dev/null; then
+              echo '✅ APK built successfully!'
+              ls -lh bin/*.apk
+            else
+              echo '❌ No APK found'
+              exit 1
+            fi
           "
     
     - name: Upload APK
@@ -42,7 +75,7 @@ jobs:
         path: bin/*.apk
         retention-days: 30
     
-    - name: Upload logs
+    - name: Upload build logs
       if: always()
       uses: actions/upload-artifact@v4
       with:
