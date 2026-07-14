@@ -60,8 +60,17 @@ jobs:
         # Use stable NDK
         sed -i 's/android.ndk = 23c/android.ndk = 23c/g' buildozer.spec
         
-        # Update requirements - remove problematic webview
-        sed -i 's/requirements = python3==3.9.5,kivy==2.1.0,requests,plyer,kivy-garden.xwebview/requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android/g' buildozer.spec
+        # Update requirements - keep webview support
+        sed -i 's/requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android/requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android,kivy-garden.xwebview/g' buildozer.spec
+        
+        # Fix: Change android.arch to android.archs
+        sed -i 's/android.arch =/android.archs =/g' buildozer.spec
+        
+        # Fix: Remove deprecated android.sdk line
+        sed -i '/android.sdk =/d' buildozer.spec
+        
+        # Fix: Update p4a.branch to master for AAB support
+        sed -i 's/p4a.branch = develop/p4a.branch = master/g' buildozer.spec
         
         # Ensure Android API is set correctly
         sed -i 's/android.api = 33/android.api = 30/g' buildozer.spec
@@ -84,6 +93,8 @@ jobs:
         if ls bin/*.apk 2>/dev/null; then
           echo "✅ APK found!"
           echo "apk_exists=true" >> $GITHUB_OUTPUT
+          echo "📦 APK files:"
+          ls -la bin/*.apk
         else
           echo "❌ No APK found"
           echo "apk_exists=false" >> $GITHUB_OUTPUT
@@ -100,6 +111,7 @@ jobs:
         path: |
           bin/*.apk
           bin/*.aab
+          bin/*.apks
         retention-days: 30
     
     - name: Upload build logs
