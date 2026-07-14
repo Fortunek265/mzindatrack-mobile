@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04  # Use Ubuntu 22.04 instead of latest
+    runs-on: ubuntu-22.04
     
     steps:
     - name: Checkout code
@@ -25,9 +25,8 @@ jobs:
         pip install --upgrade pip
         pip install buildozer cython
     
-    - name: Build APK
+    - name: Create buildozer.spec
       run: |
-        # Create clean buildozer.spec
         cat > buildozer.spec << 'EOF'
         [app]
         title = MzindaTrack
@@ -61,22 +60,63 @@ jobs:
         bin_dir = ./bin
         EOF
         
-        echo "y" | buildozer -v android debug
+        echo "✅ buildozer.spec created"
+        cat buildozer.spec
+    
+    - name: Build APK with full logging
+      run: |
+        echo "🚀 Starting build..."
+        echo "y" | buildozer -v android debug 2>&1 | tee build_full.log
+        
+        # Check exit code
+        if [ ${PIPESTATUS[0]} -eq 0 ]; then
+          echo "✅ Build completed successfully"
+        else
+          echo "❌ Build failed with exit code ${PIPESTATUS[0]}"
+          echo "📄 Showing last 200 lines of build log:"
+          tail -n 200 build_full.log
+        fi
+    
+    - name: Check build artifacts
+      run: |
+        echo "📁 Checking for APK files..."
+        ls -la bin/ 2>/dev/null || echo "bin directory not found"
+        
+        # Look for the actual APK location
+        echo "🔍 Searching for .apk files..."
+        find . -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
+        
+        # Check .buildozer directory
+        echo "📂 .buildozer contents:"
+        ls -la .buildozer/ 2>/dev/null || echo ".buildozer not found"
     
     - name: Upload APK
       if: success()
       uses: actions/upload-artifact@v4
       with:
         name: mzindatrack-apk
-        path: bin/*.apk
+        path: |
+          bin/*.apk
+          **/*.apk
         retention-days: 30
     
-    - name: Upload logs
+    - name: Upload full build logs
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: build-logs
         path: |
+          build_full.log
           ~/.buildozer/logs/*.log
           .buildozer.log
+        retention-days: 7
+    
+    - name: Upload .buildozer directory
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: buildozer-files
+        path: |
+          .buildozer/
+          bin/
         retention-days: 7
