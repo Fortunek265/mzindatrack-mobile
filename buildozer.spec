@@ -30,8 +30,8 @@ source.exclude_dirs = tests, bin, __pycache__, .git, .github, .buildozer
 # (str) Application versioning
 version = 1.0.0
 
-# (list) Application requirements - Force both to 3.9.5
-requirements = hostpython3==3.9.5,python3==3.9.5,kivy==2.1.0,requests,plyer,pyjnius,android,kivy-garden.xwebview
+# (list) Application requirements - Use develop branch compatible versions
+requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android
 
 # (str) Presplash of the application
 presplash.filename = data/presplash.png
@@ -58,8 +58,8 @@ android.api = 30
 # (int) Minimum API your APK will support
 android.minapi = 21
 
-# (str) Android NDK version - Use 25c for master
-android.ndk = 25c
+# (str) Android NDK version - Use 23c for develop branch
+android.ndk = 23c
 
 # (int) Android NDK API
 android.ndk_api = 21
@@ -88,8 +88,8 @@ android.copy_libs = 1
 # (bool) Enable AndroidX support
 android.use_androidx = True
 
-# (str) Python-for-android branch - Use master (has AAB support)
-p4a.branch = master
+# (str) Python-for-android branch - Use develop (supports Python 3.9)
+p4a.branch = develop
 
 # (str) Bootstrap to use
 p4a.bootstrap = sdl2
