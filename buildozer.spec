@@ -30,7 +30,7 @@ source.exclude_dirs = tests, bin, __pycache__, .git, .github, .buildozer
 # (str) Application versioning
 version = 1.0.0
 
-# (list) Application requirements - Added kivy-garden.xwebview for WebView support
+# (list) Application requirements
 requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android,kivy-garden.xwebview
 
 # (str) Presplash of the application
@@ -58,8 +58,8 @@ android.api = 30
 # (int) Minimum API your APK will support
 android.minapi = 21
 
-# (str) Android NDK version - UPDATED to 28c (minimum required by p4a)
-android.ndk = 28c
+# (str) Android NDK version - Use 25c for better compatibility with p4a 2023.9.0
+android.ndk = 25c
 
 # (int) Android NDK API
 android.ndk_api = 21
@@ -76,7 +76,7 @@ android.entrypoint = org.kivy.android.PythonActivity
 # (str) Android app theme
 android.apptheme = "@style/Theme.AppCompat"
 
-# (list) The Android archs to build for - UPDATED from android.arch to android.archs
+# (list) The Android archs to build for
 android.archs = arm64-v8a
 
 # (list) Android features to enable
@@ -88,9 +88,8 @@ android.copy_libs = 1
 # (bool) Enable AndroidX support
 android.use_androidx = True
 
-# (str) Python-for-android branch - Use stable release with AAB support
-# Options: 2023.10.0, 2023.9.0, or use 'master' with a workaround
-p4a.branch = 2023.10.0
+# (str) Python-for-android branch - Use stable tag 2023.9.0
+p4a.branch = 2023.9.0
 
 # (str) Bootstrap to use
 p4a.bootstrap = sdl2
