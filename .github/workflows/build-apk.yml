@@ -34,7 +34,7 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'   # match app requirements
+        python-version: '3.9'   # Must match the app's Python requirement
     
     - name: Install system dependencies
       run: |
@@ -51,12 +51,19 @@ jobs:
         echo "ANDROIDSDK=/usr/lib/android-sdk" >> $GITHUB_ENV
         echo "ANDROID_HOME=/usr/lib/android-sdk" >> $GITHUB_ENV
     
-    - name: Install Python dependencies (downgrade buildozer)
+    - name: Install buildozer 1.4.0 (does not require AAB support)
       run: |
         pip install --upgrade pip
-        # Install buildozer 1.4.0 (does not require AAB support)
         pip install buildozer==1.4.0 cython
         buildozer --version
+        # Verify version to ensure downgrade succeeded
+        BUILD_VERSION=$(buildozer --version | head -n1 | cut -d' ' -f2)
+        if [[ "$BUILD_VERSION" != "1.4.0" ]]; then
+          echo "❌ buildozer version is $BUILD_VERSION, expected 1.4.0"
+          exit 1
+        else
+          echo "✅ buildozer version is 1.4.0"
+        fi
     
     - name: Configure buildozer.spec
       run: |
@@ -97,6 +104,7 @@ jobs:
       continue-on-error: true
       run: |
         echo "🚀 Starting build process with buildozer 1.4.0..."
+        # Force APK build (not AAB)
         buildozer -v android debug 2>&1 | tee build.log
         if ls bin/*.apk 2>/dev/null; then
           echo "✅ APK found!"
