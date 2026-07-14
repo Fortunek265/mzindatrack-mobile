@@ -30,7 +30,7 @@ source.exclude_dirs = tests, bin, __pycache__, .git, .github, .buildozer
 # (str) Application versioning
 version = 1.0.0
 
-# (list) Application requirements - Python 3.9, Kivy 2.1.0 (stable)
+# (list) Application requirements - Python 3.9, Kivy 2.1.0, stable
 requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android
 
 # (str) Presplash of the application
@@ -58,7 +58,7 @@ android.api = 30
 # (int) Minimum API your APK will support
 android.minapi = 21
 
-# (str) Android NDK version - Use 23c (works with develop, no clang error)
+# (str) Android NDK version - Use 23c (no clang error)
 android.ndk = 23c
 
 # (int) Android NDK API
@@ -76,7 +76,7 @@ android.entrypoint = org.kivy.android.PythonActivity
 # (str) Android app theme
 android.apptheme = "@style/Theme.AppCompat"
 
-# (list) The Android archs to build for
+# (list) The Android archs to build for (plural form)
 android.archs = arm64-v8a
 
 # (bool) Copy library instead of making a libpymodules.so
@@ -85,7 +85,7 @@ android.copy_libs = 1
 # (bool) Enable AndroidX support
 android.use_androidx = True
 
-# (str) Python-for-android branch - Use develop (stable, no clang issue)
+# (str) Python-for-android branch - develop works with NDK 23c and Python 3.9
 p4a.branch = develop
 
 # (str) Bootstrap to use
