@@ -9,7 +9,6 @@ source.exclude_exts = spec,md,yml,yaml
 source.exclude_dirs = tests, bin, __pycache__, .git, .github, .buildozer
 version = 1.0.0
 
-# Python 3.9 with Kivy 2.1.0 – stable and compatible
 requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android
 
 presplash.filename = data/presplash.png
@@ -28,9 +27,7 @@ android.apptheme = "@style/Theme.AppCompat"
 android.archs = arm64-v8a
 android.copy_libs = 1
 android.use_androidx = True
-
-# Use a stable p4a release that does not have the pip --dry-run bug
-p4a.branch = release-2023.7.0
+p4a.branch = develop
 p4a.bootstrap = sdl2
 
 android.add_src =
