@@ -84,6 +84,9 @@ jobs:
         # Remove deprecated android.sdk line
         sed -i '/android.sdk =/d' buildozer.spec
         
+        # Remove android.features line (not supported by p4a)
+        sed -i '/android.features =/d' buildozer.spec
+        
         # Ensure Android API is set correctly
         sed -i 's/android.api = 33/android.api = 30/g' buildozer.spec
         sed -i 's/android.minapi = 21/android.minapi = 21/g' buildozer.spec
@@ -95,7 +98,7 @@ jobs:
         echo "   - hostpython3: 3.10.20"
         echo "   - python3: 3.10.20 (exact match)"
         echo "   - Kivy: 2.2.1"
-        echo "   - Removed: kivy-garden.xwebview"
+        echo "   - Removed: kivy-garden.xwebview, android.features"
         echo "   - android.archs: arm64-v8a"
         echo "   - Removed: android.sdk"
         echo ""
