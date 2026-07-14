@@ -25,7 +25,7 @@ jobs:
         pip install --upgrade pip
         pip install buildozer cython
     
-    - name: Create buildozer.spec
+    - name: Build APK
       run: |
         cat > buildozer.spec << 'EOF'
         [app]
@@ -35,7 +35,9 @@ jobs:
         source.dir = .
         source.include_exts = py,png,jpg,kv,atlas,ico,json
         version = 1.0.0
-        requirements = python3==3.9.5,kivy==2.1.0,requests,plyer
+        # Fixed requirements - using versions that exist
+        requirements = python3==3.9,kivy==2.2.0,requests,plyer==2.1
+        
         orientation = portrait
         fullscreen = 0
         
@@ -60,63 +62,27 @@ jobs:
         bin_dir = ./bin
         EOF
         
-        echo "✅ buildozer.spec created"
-        cat buildozer.spec
-    
-    - name: Build APK with full logging
-      run: |
         echo "🚀 Starting build..."
-        echo "y" | buildozer -v android debug 2>&1 | tee build_full.log
+        echo "y" | buildozer -v android debug
         
-        # Check exit code
-        if [ ${PIPESTATUS[0]} -eq 0 ]; then
-          echo "✅ Build completed successfully"
-        else
-          echo "❌ Build failed with exit code ${PIPESTATUS[0]}"
-          echo "📄 Showing last 200 lines of build log:"
-          tail -n 200 build_full.log
-        fi
-    
-    - name: Check build artifacts
-      run: |
-        echo "📁 Checking for APK files..."
-        ls -la bin/ 2>/dev/null || echo "bin directory not found"
-        
-        # Look for the actual APK location
-        echo "🔍 Searching for .apk files..."
-        find . -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
-        
-        # Check .buildozer directory
-        echo "📂 .buildozer contents:"
-        ls -la .buildozer/ 2>/dev/null || echo ".buildozer not found"
+        # Check if APK was created
+        echo "📁 Checking for APK..."
+        ls -la bin/ || echo "No APK found"
     
     - name: Upload APK
       if: success()
       uses: actions/upload-artifact@v4
       with:
         name: mzindatrack-apk
-        path: |
-          bin/*.apk
-          **/*.apk
+        path: bin/*.apk
         retention-days: 30
     
-    - name: Upload full build logs
+    - name: Upload logs
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: build-logs
         path: |
-          build_full.log
           ~/.buildozer/logs/*.log
           .buildozer.log
-        retention-days: 7
-    
-    - name: Upload .buildozer directory
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: buildozer-files
-        path: |
-          .buildozer/
-          bin/
         retention-days: 7
