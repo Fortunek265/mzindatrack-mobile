@@ -58,8 +58,8 @@ android.api = 30
 # (int) Minimum API your APK will support
 android.minapi = 21
 
-# (str) Android NDK version - Use 25c for master branch
-android.ndk = 25c
+# (str) Android NDK version - Use 23c (works with master)
+android.ndk = 23c
 
 # (int) Android NDK API
 android.ndk_api = 21
@@ -78,9 +78,6 @@ android.apptheme = "@style/Theme.AppCompat"
 
 # (list) The Android archs to build for
 android.archs = arm64-v8a
-
-# (list) Android features to enable - REMOVED (not supported)
-# android.features = android.hardware.location.gps
 
 # (bool) Copy library instead of making a libpymodules.so
 android.copy_libs = 1
