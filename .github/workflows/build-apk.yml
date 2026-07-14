@@ -34,7 +34,7 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: '3.10'
     
     - name: Install system dependencies
       run: |
@@ -51,24 +51,28 @@ jobs:
         echo "ANDROIDSDK=/usr/lib/android-sdk" >> $GITHUB_ENV
         echo "ANDROID_HOME=/usr/lib/android-sdk" >> $GITHUB_ENV
     
-    - name: Install buildozer 1.4.0
+    - name: Install buildozer (latest)
       run: |
         pip install --upgrade pip
-        pip install buildozer==1.4.0 cython
-        echo "✅ Installed buildozer:"
+        pip install buildozer cython
         buildozer --version
     
     - name: Configure buildozer.spec
       run: |
         echo "🔧 Updating buildozer.spec..."
         sed -i '/android.ndk_path =/c\# android.ndk_path =' buildozer.spec
-        sed -i 's/android.ndk = 25c/android.ndk = 23c/g' buildozer.spec
-        sed -i 's/android.ndk = 28c/android.ndk = 23c/g' buildozer.spec
-        sed -i 's/p4a.branch = master/p4a.branch = develop/g' buildozer.spec
-        sed -i 's/p4a.branch = release-2023.6.0/p4a.branch = develop/g' buildozer.spec
-        sed -i 's/p4a.branch = release-2023.7.0/p4a.branch = develop/g' buildozer.spec
-        sed -i 's/requirements = python3==3.10.*/requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android/g' buildozer.spec
-        sed -i 's/requirements = hostpython3.*/requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android/g' buildozer.spec
+        sed -i 's/android.ndk = 23c/android.ndk = 28c/g' buildozer.spec
+        sed -i 's/android.ndk = 25c/android.ndk = 28c/g' buildozer.spec
+        sed -i 's/p4a.branch = develop/p4a.branch = master/g' buildozer.spec
+        sed -i 's/p4a.branch = release-2023.6.0/p4a.branch = master/g' buildozer.spec
+        sed -i 's/p4a.branch = release-2023.7.0/p4a.branch = master/g' buildozer.spec
+        
+        # Pin hostpython and python to 3.10.20
+        sed -i 's/requirements = python3==3.9.*/requirements = hostpython3==3.10.20,python3==3.10.20,kivy==2.2.1,requests,plyer,pyjnius,android/g' buildozer.spec
+        sed -i 's/requirements = python3==3.10.*/requirements = hostpython3==3.10.20,python3==3.10.20,kivy==2.2.1,requests,plyer,pyjnius,android/g' buildozer.spec
+        sed -i 's/requirements = hostpython3.*/requirements = hostpython3==3.10.20,python3==3.10.20,kivy==2.2.1,requests,plyer,pyjnius,android/g' buildozer.spec
+        
+        # Remove kivy-garden.xwebview
         sed -i 's/kivy-garden.xwebview//g' buildozer.spec
         sed -i 's/,,/,/g' buildozer.spec
         sed -i 's/android.arch =/android.archs =/g' buildozer.spec
@@ -76,25 +80,17 @@ jobs:
         sed -i '/android.features =/d' buildozer.spec
         sed -i 's/android.api = 33/android.api = 30/g' buildozer.spec
         sed -i 's/android.minapi = 21/android.minapi = 21/g' buildozer.spec
+        
         echo ""
-        echo "✅ Updated buildozer.spec:"
-        echo "   - NDK: 23c"
-        echo "   - p4a.branch: develop"
-        echo "   - Python: 3.9"
-        echo "   - Kivy: 2.1.0"
-        echo "   - Removed kivy-garden.xwebview, android.features, android.sdk"
-        echo ""
+        echo "✅ Updated buildozer.spec"
         cat buildozer.spec
     
     - name: Build APK
       id: build
       continue-on-error: true
       run: |
-        echo "🚀 Starting build process..."
-        echo "Buildozer version:"
-        buildozer --version
-        # Use the apk subcommand explicitly
-        buildozer android debug 2>&1 | tee build.log
+        echo "🚀 Building..."
+        buildozer -v android debug 2>&1 | tee build.log
         if ls bin/*.apk 2>/dev/null; then
           echo "✅ APK found!"
           echo "apk_exists=true" >> $GITHUB_OUTPUT
@@ -128,5 +124,5 @@ jobs:
       if: always()
       run: |
         echo "# Build Summary" >> $GITHUB_STEP_SUMMARY
-        echo "## Build Status: ${{ steps.build.outcome }}" >> $GITHUB_STEP_SUMMARY
-        echo "### APK Status: ${{ steps.build.outputs.apk_exists == 'true' && '✅ Available' || '❌ Not found' }}" >> $GITHUB_STEP_SUMMARY
+        echo "## Status: ${{ steps.build.outcome }}" >> $GITHUB_STEP_SUMMARY
+        echo "### APK: ${{ steps.build.outputs.apk_exists == 'true' && '✅ Available' || '❌ Not found' }}" >> $GITHUB_STEP_SUMMARY
