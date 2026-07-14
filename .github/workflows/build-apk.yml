@@ -1,4 +1,4 @@
-name: Build MzindaTrack APK (Native)
+name: Build MzindaTrack APK
 
 on:
   push:
@@ -18,49 +18,19 @@ jobs:
       with:
         python-version: '3.9'
     
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          git zip unzip openjdk-17-jdk \
-          autoconf libtool pkg-config zlib1g-dev \
-          libncurses5-dev libncursesw5-dev libtinfo5 cmake \
-          libffi-dev libssl-dev
-        echo "✅ System dependencies installed"
+    - name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '11'
     
     - name: Setup Android SDK
-      run: |
-        # Install Android SDK
-        wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-        unzip commandlinetools-linux-9477386_latest.zip
-        mkdir -p android-sdk
-        mv cmdline-tools android-sdk/
-        cd android-sdk/cmdline-tools
-        mv . bin || true
-        cd ../..
-        
-        export ANDROID_HOME=$(pwd)/android-sdk
-        export PATH=$PATH:$ANDROID_HOME/cmdline-tools/bin
-        export PATH=$PATH:$ANDROID_HOME/platform-tools
-        
-        # Accept licenses
-        yes | $ANDROID_HOME/cmdline-tools/bin/sdkmanager --licenses
-        
-        # Install SDK components
-        $ANDROID_HOME/cmdline-tools/bin/sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
-        $ANDROID_HOME/cmdline-tools/bin/sdkmanager "ndk;23.1.7779620"
-        
-        echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
-        echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/23.1.7779620" >> $GITHUB_ENV
-        echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
-        echo "$ANDROID_HOME/cmdline-tools/bin" >> $GITHUB_PATH
-        echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
-        
-        echo "✅ Android SDK installed"
+      uses: android-actions/setup-android@v3
+      with:
+        cmdline-tools-version: 9477386
     
-    - name: Install Python dependencies
+    - name: Install buildozer
       run: |
-        pip install --upgrade pip
         pip install buildozer cython
         echo "✅ Buildozer installed"
     
@@ -68,22 +38,18 @@ jobs:
       run: |
         echo "ignore_root = 1" > .buildozer-ignore-root
     
-    - name: Fix buildozer.spec
+    - name: Build APK
       run: |
-        # Update paths for GitHub Actions
-        echo "android.sdk_path = $ANDROID_HOME" >> buildozer.spec
-        echo "android.ndk_path = $ANDROID_NDK_HOME" >> buildozer.spec
-        
-        # Fix WebView dependency
+        # Fix buildozer.spec for local build
         sed -i '/android.gradle_dependencies/d' buildozer.spec
         echo 'android.gradle_dependencies = androidx.webkit:webkit:1.8.0' >> buildozer.spec
         echo 'android.use_androidx = True' >> buildozer.spec
         
-        echo "📄 buildozer.spec updated"
-    
-    - name: Build APK
-      run: |
-        echo "🚀 Starting build..."
+        # Set correct paths
+        echo "android.sdk_path = $ANDROID_HOME" >> buildozer.spec
+        echo "android.ndk_path = $ANDROID_NDK_HOME" >> buildozer.spec
+        
+        # Build
         yes y | buildozer -v android debug
     
     - name: Upload APK
@@ -94,7 +60,7 @@ jobs:
         path: bin/*.apk
         retention-days: 30
     
-    - name: Upload build logs
+    - name: Upload logs
       if: always()
       uses: actions/upload-artifact@v4
       with:
@@ -103,12 +69,3 @@ jobs:
           ~/.buildozer/logs/*.log
           .buildozer.log
         retention-days: 7
-    
-    - name: Debug - Show build directory
-      if: failure()
-      run: |
-        echo "📁 Build directory contents:"
-        find ~/.buildozer -type f -name "*.log" | head -10
-        echo ""
-        echo "📄 Last 100 lines of build log:"
-        find ~/.buildozer -name "*.log" -exec tail -100 {} \;
