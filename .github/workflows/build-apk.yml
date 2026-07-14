@@ -1,4 +1,4 @@
-name: Build MzindaTrack APK (Final)
+name: Build MzindaTrack APK (Ubuntu 22.04)
 
 on:
   push:
@@ -7,13 +7,18 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04  # Use Ubuntu 22.04 instead of latest
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Setup Environment
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
@@ -22,8 +27,8 @@ jobs:
     
     - name: Build APK
       run: |
-        # Completely rewrite buildozer.spec for maximum compatibility
-        cat > buildozer.spec.tmp << 'EOF'
+        # Create clean buildozer.spec
+        cat > buildozer.spec << 'EOF'
         [app]
         title = MzindaTrack
         package.name = mzindatrack
@@ -56,10 +61,6 @@ jobs:
         bin_dir = ./bin
         EOF
         
-        # Replace with new spec
-        mv buildozer.spec.tmp buildozer.spec
-        
-        # Build
         echo "y" | buildozer -v android debug
     
     - name: Upload APK
