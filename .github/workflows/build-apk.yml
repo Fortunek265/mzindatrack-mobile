@@ -28,7 +28,7 @@ jobs:
       run: |
         mkdir -p assets data
         echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==" | base64 -d > assets/icon.png
-        echo "iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAOxAAADsQBlSsOGwAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAA9SURBVHic7cEBDQAAAMKg909tDwcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8Gx8QwABqSkbYAAAAABJRU5ErkJggg==" | base64 -d > data/presplash.png
+        echo "iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAOxAAADsQBlSsOGwAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAA9SURBVHic7cEBDQAAAMKg909tDwcAAAAAAA[...]
         echo "✅ Created placeholder images"
     
     - name: Setup Python
@@ -60,9 +60,18 @@ jobs:
     - name: Configure buildozer.spec
       run: |
         echo "🔧 Updating buildozer.spec..."
+        
+        # Remove any duplicate gradle dependencies lines
+        sed -i '/^android.gradle_dependencies/d' buildozer.spec
+        
+        # Comment out android.ndk_path
         sed -i '/android.ndk_path =/c\# android.ndk_path =' buildozer.spec
+        
+        # Update NDK version
         sed -i 's/android.ndk = 23c/android.ndk = 28c/g' buildozer.spec
         sed -i 's/android.ndk = 25c/android.ndk = 28c/g' buildozer.spec
+        
+        # Update p4a branch
         sed -i 's/p4a.branch = develop/p4a.branch = master/g' buildozer.spec
         sed -i 's/p4a.branch = release-2023.6.0/p4a.branch = master/g' buildozer.spec
         sed -i 's/p4a.branch = release-2023.7.0/p4a.branch = master/g' buildozer.spec
@@ -72,12 +81,18 @@ jobs:
         sed -i 's/requirements = python3==3.10.*/requirements = hostpython3==3.10.20,python3==3.10.20,kivy==2.2.1,requests,plyer,pyjnius,android/g' buildozer.spec
         sed -i 's/requirements = hostpython3.*/requirements = hostpython3==3.10.20,python3==3.10.20,kivy==2.2.1,requests,plyer,pyjnius,android/g' buildozer.spec
         
-        # Remove kivy-garden.xwebview
+        # Remove kivy-garden.xwebview and clean up
         sed -i 's/kivy-garden.xwebview//g' buildozer.spec
         sed -i 's/,,/,/g' buildozer.spec
+        
+        # Fix android.arch to android.archs
         sed -i 's/android.arch =/android.archs =/g' buildozer.spec
-        sed -i '/android.sdk =/d' buildozer.spec
-        sed -i '/android.features =/d' buildozer.spec
+        
+        # Remove duplicate or problematic lines
+        sed -i '/^android.sdk =/d' buildozer.spec
+        sed -i '/^android.features =/d' buildozer.spec
+        
+        # Set API levels
         sed -i 's/android.api = 33/android.api = 30/g' buildozer.spec
         sed -i 's/android.minapi = 21/android.minapi = 21/g' buildozer.spec
         
