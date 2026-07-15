@@ -9,36 +9,38 @@ source.exclude_exts = spec,md,yml,yaml
 source.exclude_dirs = tests, bin, __pycache__, .git, .github, .buildozer
 version = 1.0.0
 
-# Pin both hostpython and python to 3.10.20 (matches the runner)
-requirements = hostpython3==3.10.20,python3==3.10.20,kivy==2.2.1,requests,plyer,pyjnius,android
+# IMPORTANT: Do NOT include 'android' as a pip requirement. It's built by p4a.
+# Only include pure Python packages and libraries buildozer can cross-compile
+requirements = python3==3.10.13,kivy==2.2.1,requests,plyer,pyjnius
 
 presplash.filename = data/presplash.png
 icon.filename = assets/icon.png
 orientation = portrait
 fullscreen = 0
+
+# Android permissions
 android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION
+
+# API levels
 android.api = 30
 android.minapi = 21
 android.ndk = 28c
 android.ndk_api = 21
+
+# Build flags
 android.skip_update = False
 android.accept_sdk_license = True
 android.entrypoint = org.kivy.android.PythonActivity
-android.apptheme = "@style/Theme.AppCompat"
+android.apptheme = @style/Theme.AppCompat
 android.archs = arm64-v8a
 android.copy_libs = 1
 android.use_androidx = True
+
+# Python-for-Android settings
 p4a.branch = master
 p4a.bootstrap = sdl2
 
-android.add_src =
-android.add_java =
-android.add_libs_armeabi_v7a =
-android.add_libs_arm64_v8a =
-android.add_libs_x86 =
-android.add_libs_x86_64 =
-android.add_aars =
-android.gradle_dependencies =
+# Additional android configuration
 android.window_background_color = #0a0f1e
 android.logcat_filters = *:S python:D
 android.debug = 1
