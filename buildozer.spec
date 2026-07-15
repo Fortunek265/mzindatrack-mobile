@@ -27,9 +27,7 @@ android.apptheme = "@style/Theme.AppCompat"
 android.archs = arm64-v8a
 android.copy_libs = 1
 android.use_androidx = True
-
-# Known stable release
-p4a.branch = release-2022.7.0
+p4a.branch = develop
 p4a.bootstrap = sdl2
 
 android.add_src =
