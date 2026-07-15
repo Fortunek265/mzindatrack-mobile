@@ -21,7 +21,7 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: '3.9'
 
     - name: Cache buildozer
       uses: actions/cache@v4
@@ -76,10 +76,10 @@ jobs:
         echo "🔨 Upgrading pip and setuptools..."
         pip install --upgrade pip setuptools wheel
         
-        echo "🔨 Installing buildozer and cython..."
-        pip install buildozer cython
+        echo "🔨 Installing buildozer, cython, and python-for-android..."
+        pip install buildozer cython python-for-android
         
-        echo "✅ Buildozer installed"
+        echo "✅ Build tools installed"
         echo "📍 Buildozer path:"
         which buildozer || echo "❌ buildozer not found in PATH"
         
@@ -94,8 +94,8 @@ jobs:
         echo ""
         if [ -f buildozer.spec ]; then
           echo "📄 buildozer.spec found"
-          echo "First 20 lines:"
-          head -20 buildozer.spec
+          echo "First 30 lines:"
+          head -30 buildozer.spec
         else
           echo "⚠️ buildozer.spec NOT found"
         fi
@@ -128,15 +128,15 @@ jobs:
           sed -i 's/android.ndk = 23c/android.ndk = 28c/g' buildozer.spec || true
           sed -i 's/android.ndk = 25c/android.ndk = 28c/g' buildozer.spec || true
 
-          # Update p4a branch
+          # Update p4a branch to master (latest stable)
           sed -i 's/p4a.branch = develop/p4a.branch = master/g' buildozer.spec || true
           sed -i 's/p4a.branch = release-2023.6.0/p4a.branch = master/g' buildozer.spec || true
           sed -i 's/p4a.branch = release-2023.7.0/p4a.branch = master/g' buildozer.spec || true
 
-          # Pin python to 3.10.20 and use compatible Kivy version
-          sed -i 's/requirements = python3==3.9.*/requirements = python3==3.10.20,kivy==2.3.0,requests,plyer,pyjnius/g' buildozer.spec || true
-          sed -i 's/requirements = python3==3.10.*/requirements = python3==3.10.20,kivy==2.3.0,requests,plyer,pyjnius/g' buildozer.spec || true
-          sed -i 's/requirements = hostpython3.*/requirements = python3==3.10.20,kivy==2.3.0,requests,plyer,pyjnius/g' buildozer.spec || true
+          # Use Python 3.9 with Kivy 2.2.1 (proven stable combination for Android)
+          sed -i 's/requirements = python3==3.9.*/requirements = python3==3.9,kivy==2.2.1,requests,plyer,pyjnius/g' buildozer.spec || true
+          sed -i 's/requirements = python3==3.10.*/requirements = python3==3.9,kivy==2.2.1,requests,plyer,pyjnius/g' buildozer.spec || true
+          sed -i 's/requirements = hostpython3.*/requirements = python3==3.9,kivy==2.2.1,requests,plyer,pyjnius/g' buildozer.spec || true
 
           # Remove problematic dependencies
           sed -i 's/kivy-garden.xwebview//g' buildozer.spec || true
@@ -154,6 +154,9 @@ jobs:
           sed -i 's/android.minapi = 21/android.minapi = 21/g' buildozer.spec || true
 
           echo "✅ buildozer.spec updated"
+          echo ""
+          echo "📋 Requirements line:"
+          grep "^requirements" buildozer.spec || echo "No requirements line found"
         else
           echo "⚠️ buildozer.spec not found; skipping configuration"
         fi
@@ -283,7 +286,7 @@ jobs:
         find . -maxdepth 2 -type d | head -20
         echo ""
         echo "🔍 buildozer configuration:"
-        [ -f buildozer.spec ] && head -30 buildozer.spec || echo "buildozer.spec not found"
+        [ -f buildozer.spec ] && head -50 buildozer.spec || echo "buildozer.spec not found"
         echo ""
         echo "💾 Disk space status:"
         df -h /
@@ -291,3 +294,5 @@ jobs:
         echo "🔧 Build environment:"
         echo "Java version: $(java -version 2>&1 | head -1)"
         echo "Android SDK: $(ls -d /usr/lib/android-sdk 2>/dev/null || echo 'Not found')"
+        echo "Python version: $(python --version)"
+        echo "Buildozer version: $(buildozer --version 2>&1 || echo 'Not found')"
