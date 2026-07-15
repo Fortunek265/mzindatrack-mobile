@@ -8,9 +8,7 @@ source.include_patterns = assets/*,data/*,*.py
 source.exclude_exts = spec,md,yml,yaml
 source.exclude_dirs = tests, bin, __pycache__, .git, .github, .buildozer
 version = 1.0.0
-
 requirements = python3==3.9,kivy==2.1.0,requests,plyer,pyjnius,android
-
 presplash.filename = data/presplash.png
 icon.filename = assets/icon.png
 orientation = portrait
