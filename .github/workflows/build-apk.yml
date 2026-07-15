@@ -133,10 +133,10 @@ jobs:
           sed -i 's/p4a.branch = release-2023.6.0/p4a.branch = master/g' buildozer.spec || true
           sed -i 's/p4a.branch = release-2023.7.0/p4a.branch = master/g' buildozer.spec || true
 
-          # Pin hostpython and python to 3.10.20
-          sed -i 's/requirements = python3==3.9.*/requirements = hostpython3==3.10.20,python3==3.10.20,kivy==2.2.1,requests,plyer,pyjnius,android/g' buildozer.spec || true
-          sed -i 's/requirements = python3==3.10.*/requirements = hostpython3==3.10.20,python3==3.10.20,kivy==2.2.1,requests,plyer,pyjnius,android/g' buildozer.spec || true
-          sed -i 's/requirements = hostpython3.*/requirements = hostpython3==3.10.20,python3==3.10.20,kivy==2.2.1,requests,plyer,pyjnius,android/g' buildozer.spec || true
+          # Pin python to 3.10.20 and use compatible Kivy version
+          sed -i 's/requirements = python3==3.9.*/requirements = python3==3.10.20,kivy==2.3.0,requests,plyer,pyjnius/g' buildozer.spec || true
+          sed -i 's/requirements = python3==3.10.*/requirements = python3==3.10.20,kivy==2.3.0,requests,plyer,pyjnius/g' buildozer.spec || true
+          sed -i 's/requirements = hostpython3.*/requirements = python3==3.10.20,kivy==2.3.0,requests,plyer,pyjnius/g' buildozer.spec || true
 
           # Remove problematic dependencies
           sed -i 's/kivy-garden.xwebview//g' buildozer.spec || true
