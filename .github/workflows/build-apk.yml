@@ -54,9 +54,17 @@ jobs:
     - name: Install buildozer 1.4.0
       run: |
         pip install --upgrade pip
+        # Force reinstall buildozer 1.4.0
+        pip uninstall -y buildozer || true
         pip install buildozer==1.4.0 cython
-        echo "Buildozer version:"
+        echo "✅ Buildozer version installed:"
         buildozer --version
+        # Verify it's actually 1.4.0
+        VERSION=$(buildozer --version 2>&1 | head -n1 | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -n1)
+        echo "Detected version: $VERSION"
+        if [ "$VERSION" != "1.4.0" ]; then
+          echo "⚠️ Warning: Expected 1.4.0 but got $VERSION"
+        fi
     
     - name: Configure buildozer.spec
       run: |
@@ -82,7 +90,7 @@ jobs:
       id: build
       continue-on-error: true
       run: |
-        echo "🚀 Building with buildozer 1.4.0 and p4a develop..."
+        echo "🚀 Building..."
         # Use the apk subcommand explicitly
         buildozer android debug 2>&1 | tee build.log
         if ls bin/*.apk 2>/dev/null; then
