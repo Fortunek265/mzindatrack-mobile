@@ -8,13 +8,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+
     - name: List repository files (debug)
       run: |
+        set -euo pipefail
         echo "📁 Repository root files:"
         ls -la
         echo ""
@@ -23,23 +24,24 @@ jobs:
         echo ""
         echo "📁 Data folder (if exists):"
         ls -la data/ || echo "data/ folder not found"
-  
-         - name: Create placeholder icon and presplash
-        run: |
+
+    - name: Create placeholder icon and presplash
+      run: |
+        set -euo pipefail
         mkdir -p assets data
-        # Create icon.png
-        echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==" | base64 -d > assets/icon.png
-        # Create presplash.png
-        echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=" | base64 -d > assets/presplash.png
+        # Create a small valid 1x1 PNG placeholder for icon and presplash using safe single-quoted base64
+        echo 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=' | base64 -d > assets/icon.png
+        echo 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=' | base64 -d > assets/presplash.png
         echo "✅ Created placeholder images"
-    
+
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
-    
+
     - name: Install system dependencies
       run: |
+        set -euo pipefail
         sudo apt-get update
         sudo apt-get install -y \
           git zip unzip \
@@ -52,60 +54,68 @@ jobs:
           android-sdk-platform-tools
         echo "ANDROIDSDK=/usr/lib/android-sdk" >> $GITHUB_ENV
         echo "ANDROID_HOME=/usr/lib/android-sdk" >> $GITHUB_ENV
-    
+
     - name: Install buildozer (latest)
       run: |
+        set -euo pipefail
         pip install --upgrade pip
         pip install buildozer cython
         buildozer --version
-    
+
     - name: Configure buildozer.spec
       run: |
+        set -euo pipefail
         echo "🔧 Updating buildozer.spec..."
-        
-        # Remove any duplicate gradle dependencies lines
-        sed -i '/^android.gradle_dependencies/d' buildozer.spec
-        
-        # Comment out android.ndk_path
-        sed -i '/android.ndk_path =/c\# android.ndk_path =' buildozer.spec
-        
-        # Update NDK version
-        sed -i 's/android.ndk = 23c/android.ndk = 28c/g' buildozer.spec
-        sed -i 's/android.ndk = 25c/android.ndk = 28c/g' buildozer.spec
-        
-        # Update p4a branch
-        sed -i 's/p4a.branch = develop/p4a.branch = master/g' buildozer.spec
-        sed -i 's/p4a.branch = release-2023.6.0/p4a.branch = master/g' buildozer.spec
-        sed -i 's/p4a.branch = release-2023.7.0/p4a.branch = master/g' buildozer.spec
-        
-        # Pin hostpython and python to 3.10.20
-        sed -i 's/requirements = python3==3.9.*/requirements = hostpython3==3.10.20,python3==3.10.20,kivy==2.2.1,requests,plyer,pyjnius,android/g' buildozer.spec
-        sed -i 's/requirements = python3==3.10.*/requirements = hostpython3==3.10.20,python3==3.10.20,kivy==2.2.1,requests,plyer,pyjnius,android/g' buildozer.spec
-        sed -i 's/requirements = hostpython3.*/requirements = hostpython3==3.10.20,python3==3.10.20,kivy==2.2.1,requests,plyer,pyjnius,android/g' buildozer.spec
-        
-        # Remove kivy-garden.xwebview and clean up
-        sed -i 's/kivy-garden.xwebview//g' buildozer.spec
-        sed -i 's/,,/,/g' buildozer.spec
-        
-        # Fix android.arch to android.archs
-        sed -i 's/android.arch =/android.archs =/g' buildozer.spec
-        
-        # Remove duplicate or problematic lines
-        sed -i '/^android.sdk =/d' buildozer.spec
-        sed -i '/^android.features =/d' buildozer.spec
-        
-        # Set API levels
-        sed -i 's/android.api = 33/android.api = 30/g' buildozer.spec
-        sed -i 's/android.minapi = 21/android.minapi = 21/g' buildozer.spec
-        
+
+        # Only attempt edits if the file exists to avoid accidental failures in CI
+        if [ -f buildozer.spec ]; then
+          # Remove any duplicate gradle dependencies lines
+          sed -i '/^android.gradle_dependencies/d' buildozer.spec || true
+
+          # Comment out android.ndk_path
+          sed -i '/android.ndk_path =/c\# android.ndk_path =' buildozer.spec || true
+
+          # Update NDK version
+          sed -i 's/android.ndk = 23c/android.ndk = 28c/g' buildozer.spec || true
+          sed -i 's/android.ndk = 25c/android.ndk = 28c/g' buildozer.spec || true
+
+          # Update p4a branch
+          sed -i 's/p4a.branch = develop/p4a.branch = master/g' buildozer.spec || true
+          sed -i 's/p4a.branch = release-2023.6.0/p4a.branch = master/g' buildozer.spec || true
+          sed -i 's/p4a.branch = release-2023.7.0/p4a.branch = master/g' buildozer.spec || true
+
+          # Pin hostpython and python to 3.10.20
+          sed -i 's/requirements = python3==3.9.*/requirements = hostpython3==3.10.20,python3==3.10.20,kivy==2.2.1,requests,plyer,pyjnius,android/g' buildozer.spec || true
+          sed -i 's/requirements = python3==3.10.*/requirements = hostpython3==3.10.20,python3==3.10.20,kivy==2.2.1,requests,plyer,pyjnius,android/g' buildozer.spec || true
+          sed -i 's/requirements = hostpython3.*/requirements = hostpython3==3.10.20,python3==3.10.20,kivy==2.2.1,requests,plyer,pyjnius,android/g' buildozer.spec || true
+
+          # Remove kivy-garden.xwebview and clean up
+          sed -i 's/kivy-garden.xwebview//g' buildozer.spec || true
+          sed -i 's/,,/,/g' buildozer.spec || true
+
+          # Fix android.arch to android.archs
+          sed -i 's/android.arch =/android.archs =/g' buildozer.spec || true
+
+          # Remove duplicate or problematic lines
+          sed -i '/^android.sdk =/d' buildozer.spec || true
+          sed -i '/^android.features =/d' buildozer.spec || true
+
+          # Set API levels
+          sed -i 's/android.api = 33/android.api = 30/g' buildozer.spec || true
+          sed -i 's/android.minapi = 21/android.minapi = 21/g' buildozer.spec || true
+        else
+          echo "buildozer.spec not found; skipping edits"
+        fi
+
         echo ""
-        echo "✅ Updated buildozer.spec"
-        cat buildozer.spec
-    
+        echo "✅ Updated buildozer.spec (if present)"
+        [ -f buildozer.spec ] && cat buildozer.spec || true
+
     - name: Build APK
       id: build
       continue-on-error: true
       run: |
+        set -euo pipefail
         echo "🚀 Building..."
         buildozer -v android debug 2>&1 | tee build.log
         if ls bin/*.apk 2>/dev/null; then
@@ -115,9 +125,9 @@ jobs:
         else
           echo "❌ No APK found"
           echo "apk_exists=false" >> $GITHUB_OUTPUT
-          tail -n 300 build.log
+          tail -n 300 build.log || true
         fi
-    
+
     - name: Upload APK
       if: steps.build.outputs.apk_exists == 'true'
       uses: actions/upload-artifact@v4
@@ -125,7 +135,7 @@ jobs:
         name: mzindatrack-apk
         path: bin/*.apk
         retention-days: 30
-    
+
     - name: Upload build logs
       if: always()
       uses: actions/upload-artifact@v4
@@ -136,10 +146,11 @@ jobs:
           .buildozer/logs/*.log
           ~/.buildozer/logs/*.log
         retention-days: 7
-    
+
     - name: Build summary
       if: always()
       run: |
+        set -euo pipefail
         echo "# Build Summary" >> $GITHUB_STEP_SUMMARY
         echo "## Status: ${{ steps.build.outcome }}" >> $GITHUB_STEP_SUMMARY
         echo "### APK: ${{ steps.build.outputs.apk_exists == 'true' && '✅ Available' || '❌ Not found' }}" >> $GITHUB_STEP_SUMMARY
