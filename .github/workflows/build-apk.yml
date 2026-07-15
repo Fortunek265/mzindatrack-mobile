@@ -12,6 +12,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    timeout-minutes: 180
 
     steps:
     - name: Checkout code
@@ -31,6 +32,12 @@ jobs:
         key: buildozer-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
         restore-keys: |
           buildozer-${{ runner.os }}-
+
+    - name: Measure disk space
+      run: |
+        set -euo pipefail
+        echo "💾 Disk Space Before Build:"
+        df -h / | awk '{print "  " $0}'
 
     - name: Install system dependencies
       run: |
@@ -154,30 +161,47 @@ jobs:
     - name: Build APK
       id: build
       continue-on-error: true
-      timeout-minutes: 120
+      timeout-minutes: 150
       run: |
         set -euo pipefail
+        BUILD_START=$(date +%s)
         echo "🚀 Starting APK build..."
+        echo "⏰ Build started at: $(date)"
         echo ""
         
         # Verify buildozer is available before building
         which buildozer || { echo "❌ buildozer not found!"; exit 127; }
         
         buildozer -v android debug 2>&1 | tee build.log
+        BUILD_EXIT=$?
         
+        BUILD_END=$(date +%s)
+        BUILD_TIME=$((BUILD_END - BUILD_START))
+        BUILD_MINUTES=$((BUILD_TIME / 60))
+        BUILD_SECONDS=$((BUILD_TIME % 60))
+        
+        echo ""
+        echo "⏱️ Build completed in: ${BUILD_MINUTES}m ${BUILD_SECONDS}s"
         echo ""
         echo "🔍 Checking for APK..."
         if ls bin/*.apk 2>/dev/null; then
           echo "✅ APK build successful!"
+          APK_SIZE=$(du -h bin/*.apk | awk '{print $1}' | tail -1)
+          echo "📦 APK Size: $APK_SIZE"
           echo "apk_exists=true" >> $GITHUB_OUTPUT
+          echo "build_time=${BUILD_MINUTES}m ${BUILD_SECONDS}s" >> $GITHUB_OUTPUT
+          echo "apk_size=$APK_SIZE" >> $GITHUB_OUTPUT
           ls -lh bin/*.apk
         else
           echo "❌ No APK found in bin/"
           echo "apk_exists=false" >> $GITHUB_OUTPUT
+          echo "build_time=${BUILD_MINUTES}m ${BUILD_SECONDS}s" >> $GITHUB_OUTPUT
           echo ""
-          echo "📋 Last 50 lines of build log:"
-          tail -n 50 build.log || true
+          echo "📋 Last 100 lines of build log:"
+          tail -n 100 build.log || true
         fi
+        
+        exit $BUILD_EXIT
 
     - name: Upload APK artifact
       if: steps.build.outputs.apk_exists == 'true'
@@ -199,6 +223,20 @@ jobs:
         retention-days: 7
         if-no-files-found: warn
 
+    - name: Performance metrics
+      if: always()
+      run: |
+        set -euo pipefail
+        echo "📊 Build Performance Metrics:"
+        echo ""
+        echo "Build Time: ${{ steps.build.outputs.build_time }}"
+        if [ "${{ steps.build.outputs.apk_exists }}" = "true" ]; then
+          echo "APK Size: ${{ steps.build.outputs.apk_size }}"
+        fi
+        echo ""
+        echo "💾 Disk Space After Build:"
+        df -h / | awk '{print "  " $0}'
+
     - name: Generate build summary
       if: always()
       run: |
@@ -214,14 +252,25 @@ jobs:
           echo "## Build Information"
           echo "- **Run Number**: ${{ github.run_number }}"
           echo "- **Branch**: ${{ github.ref_name }}"
-          echo "- **Commit**: ${{ github.sha }}"
+          echo "- **Commit**: \`${{ github.sha }}\`"
+          echo "- **Build Time**: ${{ steps.build.outputs.build_time }}"
+          echo "- **Runner**: ${{ runner.os }} (${{ runner.arch }})"
           echo ""
           if [ "${{ steps.build.outputs.apk_exists }}" = "true" ]; then
             echo "## 🎉 APK Artifact"
-            echo "APK is available in workflow artifacts: **mzindatrack-apk**"
+            echo "- **Name**: mzindatrack-apk"
+            echo "- **Size**: ${{ steps.build.outputs.apk_size }}"
+            echo "- **Available**: ✅ Available in workflow artifacts"
+            echo "- **Retention**: 30 days"
           else
             echo "## ❌ Build Failed"
             echo "Check the **build-logs-${{ github.run_number }}** artifact for details."
+            echo ""
+            echo "### Troubleshooting Tips:"
+            echo "1. Check buildozer logs in artifacts"
+            echo "2. Verify buildozer.spec is properly configured"
+            echo "3. Ensure all dependencies are available"
+            echo "4. Check for disk space issues"
           fi
         } >> $GITHUB_STEP_SUMMARY
 
@@ -235,3 +284,10 @@ jobs:
         echo ""
         echo "🔍 buildozer configuration:"
         [ -f buildozer.spec ] && head -30 buildozer.spec || echo "buildozer.spec not found"
+        echo ""
+        echo "💾 Disk space status:"
+        df -h /
+        echo ""
+        echo "🔧 Build environment:"
+        echo "Java version: $(java -version 2>&1 | head -1)"
+        echo "Android SDK: $(ls -d /usr/lib/android-sdk 2>/dev/null || echo 'Not found')"
