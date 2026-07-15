@@ -5,6 +5,10 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+env:
+  ANDROID_HOME: /usr/lib/android-sdk
+  ANDROIDSDK: /usr/lib/android-sdk
+
 jobs:
   build:
     runs-on: ubuntu-22.04
@@ -13,37 +17,30 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: List repository files (debug)
-      run: |
-        set -euo pipefail
-        echo "📁 Repository root files:"
-        ls -la
-        echo ""
-        echo "📁 Assets folder (if exists):"
-        ls -la assets/ || echo "assets/ folder not found"
-        echo ""
-        echo "📁 Data folder (if exists):"
-        ls -la data/ || echo "data/ folder not found"
-
-    - name: Create placeholder icon and presplash
-      run: |
-        set -euo pipefail
-        mkdir -p assets data
-        # Create a small valid 1x1 PNG placeholder for icon and presplash using safe single-quoted base64
-        echo 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=' | base64 -d > assets/icon.png
-        echo 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=' | base64 -d > assets/presplash.png
-        echo "✅ Created placeholder images"
-
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
 
+    - name: Cache buildozer
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.buildozer
+          ~/.cache/pip
+        key: buildozer-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
+        restore-keys: |
+          buildozer-${{ runner.os }}-
+
     - name: Install system dependencies
       run: |
         set -euo pipefail
-        sudo apt-get update
-        sudo apt-get install -y \
+        echo "📦 Updating package manager..."
+        sudo apt-get update -qq
+        
+        echo "📦 Installing build dependencies..."
+        sudo apt-get install -y --no-install-recommends \
+          build-essential \
           git zip unzip \
           openjdk-17-jdk \
           autoconf libtool pkg-config \
@@ -51,23 +48,68 @@ jobs:
           cmake libffi-dev libssl-dev \
           python3-pip python3-dev \
           android-sdk \
-          android-sdk-platform-tools
-        echo "ANDROIDSDK=/usr/lib/android-sdk" >> $GITHUB_ENV
-        echo "ANDROID_HOME=/usr/lib/android-sdk" >> $GITHUB_ENV
+          android-sdk-platform-tools \
+          ca-certificates
+        
+        echo "✅ System dependencies installed"
 
-    - name: Install buildozer (latest)
+    - name: Verify Python installation
       run: |
         set -euo pipefail
-        pip install --upgrade pip
+        echo "🐍 Python version:"
+        python --version
+        echo "📍 Python path:"
+        which python
+        echo "📍 pip path:"
+        which pip
+
+    - name: Install and verify buildozer
+      run: |
+        set -euo pipefail
+        echo "🔨 Upgrading pip and setuptools..."
+        pip install --upgrade pip setuptools wheel
+        
+        echo "🔨 Installing buildozer and cython..."
         pip install buildozer cython
+        
+        echo "✅ Buildozer installed"
+        echo "📍 Buildozer path:"
+        which buildozer || echo "❌ buildozer not found in PATH"
+        
+        echo "📍 Buildozer version:"
         buildozer --version
+
+    - name: List repository files (debug)
+      run: |
+        set -euo pipefail
+        echo "📁 Repository root files:"
+        ls -la
+        echo ""
+        if [ -f buildozer.spec ]; then
+          echo "📄 buildozer.spec found"
+          echo "First 20 lines:"
+          head -20 buildozer.spec
+        else
+          echo "⚠️ buildozer.spec NOT found"
+        fi
+
+    - name: Create placeholder assets
+      run: |
+        set -euo pipefail
+        mkdir -p assets data
+        
+        # Create a small valid 1x1 PNG placeholder
+        echo 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=' | base64 -d > assets/icon.png
+        echo 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=' | base64 -d > assets/presplash.png
+        
+        echo "✅ Created placeholder images"
+        ls -lh assets/
 
     - name: Configure buildozer.spec
       run: |
         set -euo pipefail
-        echo "🔧 Updating buildozer.spec..."
+        echo "🔧 Configuring buildozer.spec..."
 
-        # Only attempt edits if the file exists to avoid accidental failures in CI
         if [ -f buildozer.spec ]; then
           # Remove any duplicate gradle dependencies lines
           sed -i '/^android.gradle_dependencies/d' buildozer.spec || true
@@ -75,7 +117,7 @@ jobs:
           # Comment out android.ndk_path
           sed -i '/android.ndk_path =/c\# android.ndk_path =' buildozer.spec || true
 
-          # Update NDK version
+          # Update NDK version to 28c
           sed -i 's/android.ndk = 23c/android.ndk = 28c/g' buildozer.spec || true
           sed -i 's/android.ndk = 25c/android.ndk = 28c/g' buildozer.spec || true
 
@@ -89,7 +131,7 @@ jobs:
           sed -i 's/requirements = python3==3.10.*/requirements = hostpython3==3.10.20,python3==3.10.20,kivy==2.2.1,requests,plyer,pyjnius,android/g' buildozer.spec || true
           sed -i 's/requirements = hostpython3.*/requirements = hostpython3==3.10.20,python3==3.10.20,kivy==2.2.1,requests,plyer,pyjnius,android/g' buildozer.spec || true
 
-          # Remove kivy-garden.xwebview and clean up
+          # Remove problematic dependencies
           sed -i 's/kivy-garden.xwebview//g' buildozer.spec || true
           sed -i 's/,,/,/g' buildozer.spec || true
 
@@ -103,54 +145,93 @@ jobs:
           # Set API levels
           sed -i 's/android.api = 33/android.api = 30/g' buildozer.spec || true
           sed -i 's/android.minapi = 21/android.minapi = 21/g' buildozer.spec || true
-        else
-          echo "buildozer.spec not found; skipping edits"
-        fi
 
-        echo ""
-        echo "✅ Updated buildozer.spec (if present)"
-        [ -f buildozer.spec ] && cat buildozer.spec || true
+          echo "✅ buildozer.spec updated"
+        else
+          echo "⚠️ buildozer.spec not found; skipping configuration"
+        fi
 
     - name: Build APK
       id: build
       continue-on-error: true
+      timeout-minutes: 120
       run: |
         set -euo pipefail
-        echo "🚀 Building..."
+        echo "🚀 Starting APK build..."
+        echo ""
+        
+        # Verify buildozer is available before building
+        which buildozer || { echo "❌ buildozer not found!"; exit 127; }
+        
         buildozer -v android debug 2>&1 | tee build.log
+        
+        echo ""
+        echo "🔍 Checking for APK..."
         if ls bin/*.apk 2>/dev/null; then
-          echo "✅ APK found!"
+          echo "✅ APK build successful!"
           echo "apk_exists=true" >> $GITHUB_OUTPUT
-          ls -la bin/*.apk
+          ls -lh bin/*.apk
         else
-          echo "❌ No APK found"
+          echo "❌ No APK found in bin/"
           echo "apk_exists=false" >> $GITHUB_OUTPUT
-          tail -n 300 build.log || true
+          echo ""
+          echo "📋 Last 50 lines of build log:"
+          tail -n 50 build.log || true
         fi
 
-    - name: Upload APK
+    - name: Upload APK artifact
       if: steps.build.outputs.apk_exists == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: mzindatrack-apk
         path: bin/*.apk
         retention-days: 30
+        if-no-files-found: error
 
     - name: Upload build logs
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: build-logs
+        name: build-logs-${{ github.run_number }}
         path: |
           build.log
           .buildozer/logs/*.log
-          ~/.buildozer/logs/*.log
         retention-days: 7
+        if-no-files-found: warn
 
-    - name: Build summary
+    - name: Generate build summary
       if: always()
       run: |
         set -euo pipefail
-        echo "# Build Summary" >> $GITHUB_STEP_SUMMARY
-        echo "## Status: ${{ steps.build.outcome }}" >> $GITHUB_STEP_SUMMARY
-        echo "### APK: ${{ steps.build.outputs.apk_exists == 'true' && '✅ Available' || '❌ Not found' }}" >> $GITHUB_STEP_SUMMARY
+        {
+          echo "# 🔨 Build Summary"
+          echo ""
+          echo "## Status"
+          echo "- **Workflow Status**: ${{ job.status }}"
+          echo "- **Build Outcome**: ${{ steps.build.outcome }}"
+          echo "- **APK Generated**: ${{ steps.build.outputs.apk_exists == 'true' && '✅ Yes' || '❌ No' }}"
+          echo ""
+          echo "## Build Information"
+          echo "- **Run Number**: ${{ github.run_number }}"
+          echo "- **Branch**: ${{ github.ref_name }}"
+          echo "- **Commit**: ${{ github.sha }}"
+          echo ""
+          if [ "${{ steps.build.outputs.apk_exists }}" = "true" ]; then
+            echo "## 🎉 APK Artifact"
+            echo "APK is available in workflow artifacts: **mzindatrack-apk**"
+          else
+            echo "## ❌ Build Failed"
+            echo "Check the **build-logs-${{ github.run_number }}** artifact for details."
+          fi
+        } >> $GITHUB_STEP_SUMMARY
+
+    - name: Cleanup on failure
+      if: failure()
+      run: |
+        echo "⚠️ Build failed. Diagnostic information:"
+        echo ""
+        echo "📁 Current directory structure:"
+        find . -maxdepth 2 -type d | head -20
+        echo ""
+        echo "🔍 buildozer configuration:"
+        [ -f buildozer.spec ] && head -30 buildozer.spec || echo "buildozer.spec not found"
