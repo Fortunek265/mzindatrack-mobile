@@ -1,4 +1,4 @@
-# Overwrite main.py with the new responsive version
+# Create a clean main.py file (copy your code here without %%writefile)
 %%writefile /content/main.py
 #!/usr/bin/env python3
 """
