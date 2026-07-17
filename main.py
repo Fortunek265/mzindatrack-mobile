@@ -1,5 +1,3 @@
-# Create a clean main.py file (copy your code here without %%writefile)
-%%writefile /content/main.py
 #!/usr/bin/env python3
 """
 MzindaTrack Mobile App - GPS Tracking Client
