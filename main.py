@@ -1,3 +1,5 @@
+# Overwrite main.py with the new responsive version
+%%writefile /content/main.py
 #!/usr/bin/env python3
 """
 MzindaTrack Mobile App - GPS Tracking Client
@@ -625,7 +627,7 @@ class MzindaTrackApp(App):
         
         self.header.status_indicator.text = "✅"
         self.header.status_tooltip = "Connected - Access granted"
-        self.header.page_name.text = "Connected"
+        self.header.page_indicator.text = "Connected"
         
         self.status_bar.status_text = "✅ Access granted - Welcome!"
         self.status_bar.status_color = "#4CAF50"
@@ -687,7 +689,7 @@ class MzindaTrackApp(App):
         if self.is_fullscreen:
             self.toggle_fullscreen()
         self.screen_manager.current = 'connect'
-        self.header.page_name.text = "Connect"
+        self.header.page_indicator.text = "Connect"
         if self.hamburger_menu:
             self.hamburger_menu.dismiss()
             self.hamburger_menu = None
@@ -695,7 +697,7 @@ class MzindaTrackApp(App):
     def switch_to_view(self, instance=None):
         """Switch to view screen"""
         self.screen_manager.current = 'view'
-        self.header.page_name.text = "View"
+        self.header.page_indicator.text = "View"
         if self.hamburger_menu:
             self.hamburger_menu.dismiss()
             self.hamburger_menu = None
@@ -705,7 +707,7 @@ class MzindaTrackApp(App):
         if self.is_fullscreen:
             self.toggle_fullscreen()
         self.screen_manager.current = 'account'
-        self.header.page_name.text = "Account"
+        self.header.page_indicator.text = "Account"
         if self.hamburger_menu:
             self.hamburger_menu.dismiss()
             self.hamburger_menu = None
@@ -739,7 +741,7 @@ class MzindaTrackApp(App):
         self.view_screen.web_view.set_home_url(url)
         self.view_screen.web_view.load_url(url)
         self.screen_manager.current = 'view'
-        self.header.page_name.text = "🗺️ Map"
+        self.header.page_indicator.text = "🗺️ Map"
         self.status_bar.status_text = "Loading map..."
         self.status_bar.status_color = "#8892b0"
         
@@ -757,7 +759,7 @@ class MzindaTrackApp(App):
         self.view_screen.web_view.set_home_url(url)
         self.view_screen.web_view.load_url(url)
         self.screen_manager.current = 'view'
-        self.header.page_name.text = "📱 Phone Tracker"
+        self.header.page_indicator.text = "📱 Phone Tracker"
         self.status_bar.status_text = "Loading phone tracker..."
         self.status_bar.status_color = "#8892b0"
         
@@ -835,7 +837,7 @@ class MzindaTrackApp(App):
         
         self.header.status_indicator.text = "⚪"
         self.header.status_tooltip = "Disconnected"
-        self.header.page_name.text = "Connect"
+        self.header.page_indicator.text = "Connect"
         
         self.status_bar.status_text = "Disconnected"
         self.status_bar.status_color = "#8892b0"
